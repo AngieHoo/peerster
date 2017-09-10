@@ -10,7 +10,8 @@
 ChatDialog::ChatDialog()
 {
 	setWindowTitle("Peerster");
-
+  //make changes!!!!!!!
+  //
 	// Read-only text box where we display messages from everyone.
 	// This widget expands both horizontally and vertically.
 	textview = new QTextEdit(this);
