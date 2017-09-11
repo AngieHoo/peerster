@@ -5,6 +5,12 @@
 #include <QTextEdit>
 #include <QLineEdit>
 #include <QUdpSocket>
+#include <QVariantMap>
+#include <QHostInfo>
+#include "textinput.h"
+#include "library.h"
+
+class NetSocket;
 
 class ChatDialog : public QDialog
 {
@@ -14,22 +20,34 @@ public:
 	ChatDialog();
 
 public slots:
-	void gotReturnPressed();
+     void sendMessage();
+
+     void readPendingDatagrams();
 
 private:
+    void addMessage(QVariant message);
+    void processTheDatagram(QByteArray datagram);
 	QTextEdit *textview;
-	QLineEdit *textline;
+    TextInput *textinput;
+    NetSocket *sock;
+
 };
+
+
 
 class NetSocket : public QUdpSocket
 {
 	Q_OBJECT
 
 public:
-	NetSocket();
+    NetSocket(QObject *parent = 0);
 
 	// Bind this socket to a Peerster-specific default port.
 	bool bind();
+
+
+public slots:
+    void sendMessage(QVariantMap message);
 
 private:
 	int myPortMin, myPortMax;
