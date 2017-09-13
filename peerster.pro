@@ -17,6 +17,10 @@ QT += network
 # Input
 HEADERS += main.hh \
     textinput.h \
-    library.h
+    library.h \
+    netsocket.h \
+    chatdialog.h
 SOURCES += main.cc \
-    textinput.cpp
+    textinput.cpp \
+    netsocket.cpp \
+    chatdialog.cpp
