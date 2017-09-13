@@ -206,7 +206,7 @@ void ChatDialog::processTheDatagram(const QByteArray& datagram, const QHostAddre
         status = tmp.toMap();
         qDebug() << "message type is [CmpStatus]";
         for (QVariantMap::iterator it = statusList.begin(); it != statusList.end(); it++) {
-            if (status[it.key()] < it.value()) {
+            if (status[it.key()].toInt() < it.value().toInt()) {
                 QVariantMap newMessage;
                 newMessage["ChatText"] = messageList[it.key()][status[it.key()].toInt()];
                 newMessage["Origin"] = it.key();
