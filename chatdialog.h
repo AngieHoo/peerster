@@ -20,8 +20,11 @@ public:
 
 public slots:
      void sendMyMsg2RandomPeer();
-     void readPendingDatagrams();
-     //void checkReply();
+     void readPendingDatagrams();    
+
+private slots:
+     void doAntiEntropy();
+     void checkReply();
 
 private:
     QTextEdit* textview;
@@ -34,6 +37,7 @@ private:
 
     QVariantMap statusList; // a list of status. <"tiger",4>
     QMap<QString,QMap<quint32, QString>> messageList; // a list of received message; [<"tiger",[<1, "hello">, <2, "world">]]
+
     void processTheDatagram(const QByteArray& datagram, const QHostAddress& sender, const quint16 senderPort);
     void flipCoins(const QString& originID,const quint32& SeqNo);
     void sendStatus(const QHostAddress& sender, const quint16 senderPort,const QString& senderIdentity,const quint32& SeqNo);

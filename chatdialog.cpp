@@ -35,20 +35,22 @@ ChatDialog::ChatDialog()
     setLayout(layout);
 
     timer = new QTimer(this);
-    timer->setInterval(2000);
-
+    timer->setInterval(10000);
+    //timer->setSingleShot(true);
+    
     sock = new NetSocket(this);
     // Register a callback on the textinput's returnPressed signal
     // so that we can send the message entered by the user.
     connect(textinput, SIGNAL(returnPressed()), this, SLOT(sendMyMsg2RandomPeer()));
     connect(sock, SIGNAL(readyRead()), this, SLOT(readPendingDatagrams()));
-    //connect(time, SIGNAL(timeout(), this, SLOT(checkReply());
+    connect(timer, SIGNAL(timeout()), this, SLOT(doAntiEntropy()));
 
     if (!sock->bind())
         exit(1);
     timer->start();
-
+    
 }
+
 
 
 void ChatDialog::sendMyMsg2RandomPeer() {
@@ -66,6 +68,7 @@ void ChatDialog::sendMyMsg2RandomPeer() {
     sock->sendMsg2RandomPeer(map);
     // clean my
     textinput->clear();
+    QTimer::singleShot(2000, this, SLOT(checkReply()));
     return;
 }
 
@@ -104,11 +107,18 @@ void ChatDialog::flipCoins(const QString& originID,const quint32& SeqNo){
     message["SeqNo"] = SeqNo;
 
     sock->sendMsg2RandomPeer(message);
+    QTimer::singleShot(2000, this, SLOT(checkReply()));
     return;
 }
 
 void ChatDialog::brocastMessage(const QVariantMap& message) {
     sock->sendMsg2RandomPeer(message);
+    QTimer::singleShot(2000, this, SLOT(checkReply()));
+    return;
+}
+
+void ChatDialog::checkReply(){
+    //TODO:..........   
     return;
 }
 
@@ -130,28 +140,30 @@ void ChatDialog::processTheDatagram(const QByteArray& datagram, const QHostAddre
         QVariantMap status;
         in >> tmp;
         status = tmp.toMap();
-        QString originID = status.begin().key();
-        quint32 SeqNo = status.begin().value().toInt();
-        qDebug() << "message type is [Status]: the original ID: " << originID << ", the seqNo: " << SeqNo;
-        // find out is the sender's status is newer than mine (the required seqno is new than my requred seqno), if so send my status to it,
-        // if not, send a corresponding message to sender to met his requirement.
-        if (statusList[originID].toInt()  + 1 < SeqNo) { // the sender's status is newer than mine.
-            qDebug() << "Status type 1";
-            sendStatus(sender, senderPort, originID, statusList[originID].toInt() + 1);
+        for (QVariantMap::iterator it = status.begin(); it != status.end(); it++) {
+            QString originID = it.key();
+            quint32 SeqNo = it.value().toInt();
+            qDebug() << "message type is [Status]: the original ID: " << originID << ", the seqNo: " << SeqNo;
+            // find out is the sender's status is newer than mine (the required seqno is new than my requred seqno), if so send my status to it,
+            // if not, send a corresponding message to sender to met his requirement.
+            if (statusList[originID].toInt()  + 1 < SeqNo) { // the sender's status is newer than mine.
+                qDebug() << "Status type 1";
+                sendStatus(sender, senderPort, originID, statusList[originID].toInt() + 1);
+            }
+            else if (statusList[originID].toInt() + 1 > SeqNo){// my status is newer than the sender.
+                qDebug() << "Status type 2";
+                QVariantMap newMessage;
+                newMessage["ChatText"] = messageList[originID][SeqNo];
+                newMessage["Origin"] = originID;
+                newMessage["SeqNo"] = SeqNo;
+                sock->sendMessage(sender, senderPort, newMessage);
+                QTimer::singleShot(2000, this, SLOT(checkReply()));
+            }
+            else {  // we have exactly the same state for message from originID. so i decide to flip a coins.
+                qDebug() << "Status type 3";
+                flipCoins(originID, SeqNo - 1);
+            }
         }
-        else if (statusList[originID].toInt() + 1 > SeqNo){// my status is newer than the sender.
-            qDebug() << "Status type 2";
-            QVariantMap newMessage;
-            newMessage["ChatText"] = messageList[originID][SeqNo];
-            newMessage["Origin"] = originID;
-            newMessage["SeqNo"] = SeqNo;
-            sock->sendMessage(sender, senderPort, newMessage);
-        }
-        else {  // we have exactly the same state for message from originID. so i decide to flip a coins.
-            qDebug() << "Status type 3";
-            flipCoins(originID, SeqNo - 1);
-        }
-
     }
     else if (messageType == "ChatText") { // brocast message to a random neighbor
           QString content,originKey, SeqNoKey, originID;
@@ -185,12 +197,39 @@ void ChatDialog::processTheDatagram(const QByteArray& datagram, const QHostAddre
               qDebug() << "ChatText type 3";
               brocastMessage(message);
               sendStatus(sender, senderPort, originID, statusList[originID].toInt() + 1);
-
           }
     }
+    else if (messageType == "CmpStatus") {
+        QVariant tmp;
+        QVariantMap status;
+        in >> tmp;
+        status = tmp.toMap();
+        qDebug() << "message type is [CmpStatus]";
+        for (QVariantMap::iterator it = statusList.begin(); it != statusList.end(); it++) {
+            if (status[it.key()] < it.value()) {
+                QVariantMap newMessage;
+                newMessage["ChatText"] = messageList[it.key()][status[it.key()].toInt()];
+                newMessage["Origin"] = it.key();
+                newMessage["SeqNo"] = status[it.key()].toInt();
+                sock->sendMessage(sender,senderPort, newMessage);
+                QTimer::singleShot(2000, this, SLOT(checkReply()));
+            }
+        }
+    }
     else {//TODO: to handle the information loss???
-        qDebug() << "information dammaged! ";
+        qDebug() << "information dammaged!";
     }
 
+    return;
+}
+
+void ChatDialog::doAntiEntropy(){
+    qDebug() << "doAntiEntropy!!!!";
+    QVariantMap status;
+    status["CmpStatus"] = statusList;
+//    for (QVariantMap::iterator it = statusList.begin(); it != statusList.end(); it++) {
+//        status["CmpStatus"].toMap()[it.key()] = it.value().toInt() + 1;
+//    }
+    sock->sendMsg2RandomPeer(status);
     return;
 }
