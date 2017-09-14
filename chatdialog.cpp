@@ -10,25 +10,13 @@ ChatDialog::ChatDialog()
 
     mySeqNo = 0;
 
-    //make changes!!!!!!!
-    //
-    // Read-only text box where we display messages from everyone.
-    // This widget expands both horizontally and vertically.
     textview = new QTextEdit(this);
     textview->setReadOnly(true);
 
-    // Small text-entry box the user can enter messages.
-    // This widget normally expands only horizontally,
-    // leaving extra vertical space for the textview widget.
-    //
-    // You might change this into a read/write QTextEdit,
-    // so that the user can easily enter multi-line messages.
+
     textinput = new TextInput(this);
     textinput->setFocus();
 
-    // Lay out the widgets to appear in the main window.
-    // For Qt widget and layout concepts see:
-    // http://doc.qt.nokia.com/4.7-snapshot/widgets-and-layouts.html
     QVBoxLayout *layout = new QVBoxLayout();
     layout->addWidget(textview);
     layout->addWidget(textinput);
@@ -68,7 +56,7 @@ void ChatDialog::sendMyMsg2RandomPeer() {
     sock->sendMsg2RandomPeer(map);
     // clean my
     textinput->clear();
-    QTimer::singleShot(2000, this, SLOT(checkReply()));
+    //QTimer::singleShot(2000, this, SLOT(checkReply()));
     return;
 }
 
@@ -95,7 +83,23 @@ void ChatDialog::readPendingDatagrams() {
     }
     return;
 }
+void ChatDialog::flipCoins(){
+    qDebug() << "flip coins!!!";
+    QTime t= QTime::currentTime();
+    qsrand(t.msec()+t.second()*1000);
+    int flag = qrand() % 2;
+    if (flag == 0) {
+        qDebug() << "I am too tired! I wanna stop!!";
+        return;
+    }
+    qDebug() << "I decide to send this message to a random peer!";
+    QVariantMap statusl;
+    statusl["Want"] = statusList;
+    sock->sendMsg2RandomPeer(statusl);
+    return;
+}
 
+//version 1:
 void ChatDialog::flipCoins(const QString& originID,const quint32& SeqNo){
     QTime t= QTime::currentTime();
     qsrand(t.msec()+t.second()*1000);
@@ -107,13 +111,13 @@ void ChatDialog::flipCoins(const QString& originID,const quint32& SeqNo){
     message["SeqNo"] = SeqNo;
 
     sock->sendMsg2RandomPeer(message);
-    QTimer::singleShot(2000, this, SLOT(checkReply()));
+    //QTimer::singleShot(2000, this, SLOT(checkReply()));
     return;
 }
 
 void ChatDialog::brocastMessage(const QVariantMap& message) {
     sock->sendMsg2RandomPeer(message);
-    QTimer::singleShot(2000, this, SLOT(checkReply()));
+   // QTimer::singleShot(2000, this, SLOT(checkReply()));
     return;
 }
 
@@ -128,7 +132,21 @@ void ChatDialog::updateList(const QString& content,const QString& originID,const
     return;
 }
 
-void ChatDialog::processTheDatagram(const QByteArray& datagram, const QHostAddress& sender, const quint16 senderPort) {
+void ChatDialog::sendStatusList(const QHostAddress& sender, const quint16 senderPort) {
+
+    QVariantMap statusl;
+    //statusl["Want"] = statusList;
+    for (QVariantMap::iterator it = statusList.begin(); it != statusList.end(); it++) {
+        statusl[it.key()] = it.value().toInt() + 1;
+    }
+    QVariantMap want;
+    want["Want"] = statusl;
+    qDebug() << "send my statuslist:" << want;
+    sock->sendMessage(sender, senderPort, want);
+    return;
+}
+
+void ChatDialog::processTheDatagram(const QByteArray& datagram, const QHostAddress& sender, const quint16& senderPort) {
     // need to tell if it is a status message or a ordinary message.
     qDebug() << "receive message from" << sender << ", port:" << senderPort;
     QVariantMap message;
@@ -136,10 +154,48 @@ void ChatDialog::processTheDatagram(const QByteArray& datagram, const QHostAddre
     QString messageType;
     in >> messageType;
     if (messageType == "Want") {// a status message
+        qDebug() << "the message type is [Status]";
         QVariant tmp;
         QVariantMap status;
         in >> tmp;
         status = tmp.toMap();
+        bool flagNew = false; // flag if i have some newer status to send to the sender.
+        for (QVariantMap::iterator it = statusList.begin(); it != statusList.end(); it++) {
+            if (status[it.key()].toInt() <= it.value().toInt()) {
+                flagNew = true;
+                QVariantMap newMessage;
+                newMessage["ChatText"] = messageList[it.key()][status[it.key()].toInt()];
+                newMessage["Origin"] = it.key();
+                newMessage["SeqNo"] = status[it.key()].toInt();
+                sock->sendMessage(sender,senderPort, newMessage);
+                //QTimer::singleShot(2000, this, SLOT(checkReply()));
+            }
+        }
+
+        if (!flagNew){ // if I have nothing new for the sender, then check if the sender contains new message that i have not received
+            bool flagOld = false;
+            for (QVariantMap::iterator it = status.begin(); it != status.end(); it++) {
+                if (statusList[it.key()].toInt() + 1 < it.value().toInt()) { // the sender's status is newer than mine.
+                    flagOld = true;
+                    qDebug() << "Status type 2";
+                    sendStatusList(sender, senderPort);
+                    break;
+                }
+            }
+            if (!flagOld) { // we have exactly the same status
+                flipCoins(); // I pick up a random neighbor to send my status to it.
+            }
+            else {
+                qDebug() << "I ask him to send me some new message.";
+            }
+        }
+        else {
+            qDebug() << "I have send him some new messages he need";
+        }
+
+
+
+        /* version 1:
         for (QVariantMap::iterator it = status.begin(); it != status.end(); it++) {
             QString originID = it.key();
             quint32 SeqNo = it.value().toInt();
@@ -163,7 +219,7 @@ void ChatDialog::processTheDatagram(const QByteArray& datagram, const QHostAddre
                 qDebug() << "Status type 3";
                 flipCoins(originID, SeqNo - 1);
             }
-        }
+        }*/
     }
     else if (messageType == "ChatText") { // brocast message to a random neighbor
           QString content,originKey, SeqNoKey, originID;
@@ -179,7 +235,24 @@ void ChatDialog::processTheDatagram(const QByteArray& datagram, const QHostAddre
           message[originKey] = originID;
           message[SeqNoKey] = SeqNo;
           qDebug() << "message type is [ChatText]:" << content <<"," << originKey << ":"<< originID << ", " << SeqNoKey<< ":" << SeqNo;
-          //return;
+
+          if ((statusList[originID].toInt() + 1 == SeqNo)) {// i have never received this message, and that is what i want. the sequence of this message is right for me.
+              qDebug() << "I receive a new message with the right sequence!";
+              textview->append(content); // display this message.
+              updateList(content, originID, SeqNo);//i'll update my statuslist and my messagelist
+              qDebug() << "Update my list.... the statuslise: " << statusList << ", the message list:" << messageList;
+              brocastMessage(message); // send message to a random neighbor.
+          }
+          else if (statusList[originID] < SeqNo - 1){
+              qDebug() << "I receive a useless new message....."    ;
+              // i've never received this message, but its sequence is not what i want, so i requare sender to send me the right sequence of message.
+              //i won't display this message. but i will still brocast it.
+              brocastMessage(message); // send message to a random neighbor.
+          }
+
+           sendStatusList(sender, senderPort);// reply my statuslist;
+          // version 1: only send one status:
+          /*
           if (statusList[originID].toInt() >= SeqNo){ //i have receive this message before. so I require the sender to send me newer message.
               qDebug() << "ChatText type 1";
               sendStatus(sender, senderPort, originID, statusList[originID].toInt() + 1);
@@ -197,25 +270,26 @@ void ChatDialog::processTheDatagram(const QByteArray& datagram, const QHostAddre
               qDebug() << "ChatText type 3";
               brocastMessage(message);
               sendStatus(sender, senderPort, originID, statusList[originID].toInt() + 1);
-          }
+          }*/
     }
-    else if (messageType == "CmpStatus") {
-        QVariant tmp;
-        QVariantMap status;
-        in >> tmp;
-        status = tmp.toMap();
-        qDebug() << "message type is [CmpStatus]";
-        for (QVariantMap::iterator it = statusList.begin(); it != statusList.end(); it++) {
-            if (status[it.key()].toInt() < it.value().toInt()) {
-                QVariantMap newMessage;
-                newMessage["ChatText"] = messageList[it.key()][status[it.key()].toInt()];
-                newMessage["Origin"] = it.key();
-                newMessage["SeqNo"] = status[it.key()].toInt();
-                sock->sendMessage(sender,senderPort, newMessage);
-                QTimer::singleShot(2000, this, SLOT(checkReply()));
-            }
-        }
-    }
+
+//    else if (messageType == "CmpStatus") {
+//        QVariant tmp;
+//        QVariantMap status;
+//        in >> tmp;
+//        status = tmp.toMap();
+//        qDebug() << "message type is [CmpStatus]";
+//        for (QVariantMap::iterator it = statusList.begin(); it != statusList.end(); it++) {
+//            if (status[it.key()].toInt() < it.value().toInt()) {
+//                QVariantMap newMessage;
+//                newMessage["ChatText"] = messageList[it.key()][status[it.key()].toInt()];
+//                newMessage["Origin"] = it.key();
+//                newMessage["SeqNo"] = status[it.key()].toInt();
+//                sock->sendMessage(sender,senderPort, newMessage);
+//                QTimer::singleShot(2000, this, SLOT(checkReply()));
+//            }
+//        }
+//    }
     else {//TODO: to handle the information loss???
         qDebug() << "information dammaged!";
     }
@@ -226,10 +300,10 @@ void ChatDialog::processTheDatagram(const QByteArray& datagram, const QHostAddre
 void ChatDialog::doAntiEntropy(){
     qDebug() << "doAntiEntropy!!!!";
     QVariantMap status;
-    status["CmpStatus"] = statusList;
-//    for (QVariantMap::iterator it = statusList.begin(); it != statusList.end(); it++) {
-//        status["CmpStatus"].toMap()[it.key()] = it.value().toInt() + 1;
-//    }
+    status["Want"] = statusList;
+    for (QVariantMap::iterator it = statusList.begin(); it != statusList.end(); it++) {
+        status["Want"].toMap()[it.key()] = it.value().toInt() + 1;
+    }
     sock->sendMsg2RandomPeer(status);
     return;
 }
