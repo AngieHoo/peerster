@@ -243,7 +243,7 @@ void ChatDialog::processTheDatagram(const QByteArray& datagram, const QHostAddre
               qDebug() << "Update my list.... the statuslise: " << statusList << ", the message list:" << messageList;
               brocastMessage(message); // send message to a random neighbor.
           }
-          else if (statusList[originID] < SeqNo - 1){
+          else if (statusList[originID].toInt() < SeqNo - 1){
               qDebug() << "I receive a useless new message....."    ;
               // i've never received this message, but its sequence is not what i want, so i requare sender to send me the right sequence of message.
               //i won't display this message. but i will still brocast it.
