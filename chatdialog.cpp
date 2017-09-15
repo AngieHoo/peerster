@@ -4,7 +4,7 @@ ChatDialog::ChatDialog()
 {
     setWindowTitle("Peerster");
 
-    mySe = 0;
+    mySeqNo= 0;
     QTime t = QTime::currentTime();
     qsrand(t.msec()+t.second()*1000);
     identity = QString::number(qrand());
