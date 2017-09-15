@@ -74,6 +74,7 @@ ChatDialog::ChatDialog()
     timer->start();
 
 }
+
 void ChatDialog::checkInputNeighbor(const QString& address,const quint16& port){
     QHostAddress self(QHostAddress::LocalHost);
     qDebug() << "Input Neighbor's Address: " << address << ", Port: " << port;

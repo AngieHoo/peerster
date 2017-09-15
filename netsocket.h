@@ -18,7 +18,7 @@ class NetSocket : public QUdpSocket
 public:
     NetSocket(QObject *parent = 0);
 
-    void sendMessage(const QHostAddress& sender, const quint16 senderPort,const QVariantMap& message);
+    void sendMessage(const QHostAddress& sender, quint16 senderPort,const QVariantMap& message);
     bool bind(quint16 p);
 
 };

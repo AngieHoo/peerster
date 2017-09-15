@@ -65,7 +65,7 @@ private:
     void checkInputNeighbor(const QString& address,const quint16& post);
 
     void creatLocalNeighbors();
-    bool addNeighbor(const Peer& newPeer);
+    void addNeighbor(const Peer& newPeer);
 
 
 };
