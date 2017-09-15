@@ -8,18 +8,35 @@ ChatDialog::ChatDialog()
     qsrand(t.msec()+t.second()*1000);
     identity = QString::number(qrand());
 
-    mySeqNo = 0;
+
+    myPortMin = 32768 + (getuid() % 4096)*4;
+    myPortMax = myPortMin + 3;
 
     textview = new QTextEdit(this);
     textview->setReadOnly(true);
 
-
     textinput = new TextInput(this);
     textinput->setFocus();
 
-    QVBoxLayout *layout = new QVBoxLayout();
-    layout->addWidget(textview);
-    layout->addWidget(textinput);
+    onlineNeighbor = new QTextEdit(this);
+    onlineNeighbor->setReadOnly(true);
+
+    neighborInput = new QLineEdit(this);
+
+    QHBoxLayout *layout = new QHBoxLayout(this);
+
+    QVBoxLayout *layoutText = new QVBoxLayout(this);
+    layoutText->addWidget(textview);
+    layoutText->addWidget(textinput);
+
+    QVBoxLayout *layoutNeighbor = new QVBoxLayout(this);
+    layoutNeighbor->addWidget(onlineNeighbor);
+    layoutNeighbor->addWidget(neighborInput);
+
+    layout->addLayout(layoutText);
+    layout->addLayout(layoutNeighbor);
+
+
     setLayout(layout);
 
     timer = new QTimer(this);
@@ -32,14 +49,98 @@ ChatDialog::ChatDialog()
     connect(textinput, SIGNAL(returnPressed()), this, SLOT(sendMyMsg2RandomPeer()));
     connect(sock, SIGNAL(readyRead()), this, SLOT(readPendingDatagrams()));
     connect(timer, SIGNAL(timeout()), this, SLOT(doAntiEntropy()));
+    connect(neighborInput, SIGNAL(returnPressed()), this, SLOT(addNeighbors()));
 
-    if (!sock->bind())
-        exit(1);
+    qDebug() << "Localhost name:" << QHostInfo::localHostName();
+
+    bind();
+    creatLocalNeighbors();
+
     timer->start();
     
 }
 
+void ChatDialog::addNeighbors(){
+    QString str = neighborInput->text();
+    QString address = str.left(str.indexOf(':'));
+    quint16 port = str.mid(str.indexOf(':') + 1).toInt();
+    qDebug() << "Input Neighbor's Address: " << address << ", Port: " << port;
+    QHostAddress testIP;
+    if (testIP.setAddress(address)){ // is a IP address.
+        QHostInfo host = QHostInfo::fromName(address);
+        if (host.error() != QHostInfo::NoError) {
+            qDebug() << "Lookup failed:" << host.errorString();
+            return;
+        }
+        qDebug() << "Found hostName:" << host.hostName();
+        neighbors.push_back(Peer(host.hostName(), testIP, port));
+        onlineNeighbor->append(host.hostName() + "(" + testIP.toString() + ")" + ":" + QString::number(port));
 
+    }
+    else {
+        QEventLoop eventloop;
+        connect(this, SIGNAL(finishLookUp()), &eventloop,SLOT(quit()));
+        int id = QHostInfo::lookupHost(address, this, SLOT(lookedUp(QHostInfo)));
+        eventloop.exec();
+        if (hostInfo.addresses().size() > 0) {// success!
+            qDebug() <<  "Congradulation! we sccessfully add the neighbor!!!!!!";
+            neighbors.push_back(Peer(hostInfo.hostName(), hostInfo.addresses().at(0), port));
+            onlineNeighbor->append(address + "(" + hostInfo.addresses().at(0).toString() + ")"+ ":" + QString::number(port));
+            qDebug() << "the neigbor's Address is:" << hostInfo.addresses();
+        }
+        else{
+            QMessageBox::about(NULL, "Warning", "Invalid Address!");
+        }
+    }
+    neighborInput->clear();
+    return;
+}
+
+void ChatDialog::lookedUp(const QHostInfo &host)
+{
+    hostInfo = host;
+    if (host.error() != QHostInfo::NoError) {
+
+        qDebug() << "Lookup failed:" << host.errorString();
+        emit finishLookUp();
+        return;
+    }
+    hostInfo = host;
+//    foreach (const QHostAddress &address, host.addresses()) {
+//        qDebug() << "Found neighbor's address!!!!" << address.toString();
+//        if (address.protocol() == QAbstractSocket::IPv4Protocol)
+//            qDebug() << "Found IPv4 address:" << address.toString();
+//        else if (address.protocol() == QAbstractSocket::IPv6Protocol)
+//            qDebug() << "Found IPv6 address:" << address.toString();
+//        else
+//            qDebug() << "Found other address:" << address.toString();
+//        //TODO:
+//    }
+    emit finishLookUp();
+}
+
+void ChatDialog::creatLocalNeighbors(){
+    if (myPort > myPortMin) {
+        neighbors.push_back(Peer(QHostInfo::localHostName(),  QHostAddress::LocalHost, myPort - 1));
+        onlineNeighbor->append(QHostInfo::localHostName() + "(" + "127.0.0.1" + ")"  + ":" + QString::number(myPort - 1));
+    }
+    if (myPort < myPortMax) {
+        neighbors.push_back(Peer(QHostInfo::localHostName(),  QHostAddress::LocalHost, myPort + 1));
+        onlineNeighbor->append(QHostInfo::localHostName() + "(" +  "127.0.0.1" + ")" + ":" + QString::number(myPort + 1));
+    }
+    return;
+}
+
+void ChatDialog::bind(){
+    for (int p = myPortMin; p <= myPortMax; p++) {
+        if (sock->bind(p)) {
+            qDebug() << "bound to UDP port " << p;
+            myPort = p;
+            return;
+        }
+    }
+    exit(1);
+}
 
 void ChatDialog::sendMyMsg2RandomPeer() {
     // i'll first update my list.
@@ -53,7 +154,12 @@ void ChatDialog::sendMyMsg2RandomPeer() {
     map["ChatText"] = textinput->toPlainText();
     map["Origin"] = identity;
     map["SeqNo"] = mySeqNo;
-    sock->sendMsg2RandomPeer(map);
+
+    QTime t= QTime::currentTime();
+    qsrand(t.msec()+t.second()*1000);
+    int pickNo = qrand() % neighbors.size();
+
+    sock->sendMessage(neighbors[pickNo].getIP(),neighbors[pickNo].getPort(),map);
     // clean my
     textinput->clear();
     //QTimer::singleShot(2000, this, SLOT(checkReply()));
@@ -94,35 +200,23 @@ void ChatDialog::flipCoins(){
     }
     qDebug() << "I decide to send this message to a random peer!";
     QVariantMap statusl;
-    statusl["Want"] = statusList;
-    sock->sendMsg2RandomPeer(statusl);
+    int pickNo = qrand() % neighbors.size();
+    sendStatusList(neighbors[pickNo].getIP(),neighbors[pickNo].getPort());
     return;
 }
 
-//version 1:
-void ChatDialog::flipCoins(const QString& originID,const quint32& SeqNo){
-    QTime t= QTime::currentTime();
-    qsrand(t.msec()+t.second()*1000);
-    int flag = qrand() % 2;
-    if (flag == 0) return;
-    QVariantMap message;
-    message["ChatText"] = messageList[originID][SeqNo];
-    message["Origin"] = originID;
-    message["SeqNo"] = SeqNo;
-
-    sock->sendMsg2RandomPeer(message);
-    //QTimer::singleShot(2000, this, SLOT(checkReply()));
-    return;
-}
 
 void ChatDialog::brocastMessage(const QVariantMap& message) {
-    sock->sendMsg2RandomPeer(message);
-   // QTimer::singleShot(2000, this, SLOT(checkReply()));
+    QTime t= QTime::currentTime();
+    qsrand(t.msec()+t.second()*1000);
+    int pickNo = qrand() % neighbors.size();
+    sock->sendMessage(neighbors[pickNo].getIP(),neighbors[pickNo].getPort(),message);
+    // QTimer::singleShot(2000, this, SLOT(checkReply()));
     return;
 }
 
 void ChatDialog::checkReply(){
-    //TODO:..........   
+    //TODO:..........
     return;
 }
 
@@ -147,6 +241,28 @@ void ChatDialog::sendStatusList(const QHostAddress& sender, const quint16 sender
 }
 
 void ChatDialog::processTheDatagram(const QByteArray& datagram, const QHostAddress& sender, const quint16& senderPort) {
+
+    // we first check is the sender is a new neighbor:
+    bool isNewNeighbor = true;
+    qDebug() << "senderIP:" << sender.toIPv4Address() << ", port:" << senderPort;
+    for (QVector<Peer>::iterator it = neighbors.begin(); it != neighbors.end(); it++) {
+        qDebug() << "my IP: " << it->getIP().toIPv4Address() << ", PORT:" << it->getPort();
+        if (it->getIP().toIPv4Address() == sender.toIPv4Address() && it->getPort() == senderPort) {
+            isNewNeighbor = false;
+            break;
+        }
+    }
+    if (isNewNeighbor) { // add this new neighbors.
+        QHostInfo host = QHostInfo::fromName(sender.toString());
+        if (host.error() != QHostInfo::NoError) {
+            qDebug() << "Lookup failed:" << host.errorString();
+            return;
+        }
+        qDebug() << "Here comes a new neighbor!!!" << host.hostName();
+        neighbors.push_back(Peer(host.hostName(), sender, senderPort));
+        onlineNeighbor->append(host.hostName() + "(" + sender.toString() + ")" + ":" + QString::number(senderPort));
+    }
+
     // need to tell if it is a status message or a ordinary message.
     qDebug() << "receive message from" << sender << ", port:" << senderPort;
     QVariantMap message;
@@ -222,37 +338,37 @@ void ChatDialog::processTheDatagram(const QByteArray& datagram, const QHostAddre
         }*/
     }
     else if (messageType == "ChatText") { // brocast message to a random neighbor
-          QString content,originKey, SeqNoKey, originID;
-          quint32 SeqNo;
-          QVariant tmp;
-          in >> tmp;
-          content = tmp.toString();
-          in >> originKey >> tmp;
-          originID = tmp.toString();
-          in >> SeqNoKey >> tmp;
-          SeqNo = tmp.toInt();
-          message[messageType] = content;
-          message[originKey] = originID;
-          message[SeqNoKey] = SeqNo;
-          qDebug() << "message type is [ChatText]:" << content <<"," << originKey << ":"<< originID << ", " << SeqNoKey<< ":" << SeqNo;
+        QString content,originKey, SeqNoKey, originID;
+        quint32 SeqNo;
+        QVariant tmp;
+        in >> tmp;
+        content = tmp.toString();
+        in >> originKey >> tmp;
+        originID = tmp.toString();
+        in >> SeqNoKey >> tmp;
+        SeqNo = tmp.toInt();
+        message[messageType] = content;
+        message[originKey] = originID;
+        message[SeqNoKey] = SeqNo;
+        qDebug() << "message type is [ChatText]:" << content <<"," << originKey << ":"<< originID << ", " << SeqNoKey<< ":" << SeqNo;
 
-          if ((statusList[originID].toInt() + 1 == SeqNo)) {// i have never received this message, and that is what i want. the sequence of this message is right for me.
-              qDebug() << "I receive a new message with the right sequence!";
-              textview->append(content); // display this message.
-              updateList(content, originID, SeqNo);//i'll update my statuslist and my messagelist
-              qDebug() << "Update my list.... the statuslise: " << statusList << ", the message list:" << messageList;
-              brocastMessage(message); // send message to a random neighbor.
-          }
-          else if (statusList[originID].toInt() < SeqNo - 1){
-              qDebug() << "I receive a useless new message....."    ;
-              // i've never received this message, but its sequence is not what i want, so i requare sender to send me the right sequence of message.
-              //i won't display this message. but i will still brocast it.
-              brocastMessage(message); // send message to a random neighbor.
-          }
+        if ((statusList[originID].toInt() + 1 == SeqNo)) {// i have never received this message, and that is what i want. the sequence of this message is right for me.
+            qDebug() << "I receive a new message with the right sequence!";
+            textview->append(content); // display this message.
+            updateList(content, originID, SeqNo);//i'll update my statuslist and my messagelist
+            qDebug() << "Update my list.... the statuslise: " << statusList << ", the message list:" << messageList;
+            brocastMessage(message); // send message to a random neighbor.
+        }
+        else if (statusList[originID].toInt() < SeqNo - 1){
+            qDebug() << "I receive a useless new message....."    ;
+            // i've never received this message, but its sequence is not what i want, so i requare sender to send me the right sequence of message.
+            //i won't display this message. but i will still brocast it.
+            brocastMessage(message); // send message to a random neighbor.
+        }
 
-           sendStatusList(sender, senderPort);// reply my statuslist;
-          // version 1: only send one status:
-          /*
+        sendStatusList(sender, senderPort);// reply my statuslist;
+        // version 1: only send one status:
+        /*
           if (statusList[originID].toInt() >= SeqNo){ //i have receive this message before. so I require the sender to send me newer message.
               qDebug() << "ChatText type 1";
               sendStatus(sender, senderPort, originID, statusList[originID].toInt() + 1);
@@ -273,23 +389,6 @@ void ChatDialog::processTheDatagram(const QByteArray& datagram, const QHostAddre
           }*/
     }
 
-//    else if (messageType == "CmpStatus") {
-//        QVariant tmp;
-//        QVariantMap status;
-//        in >> tmp;
-//        status = tmp.toMap();
-//        qDebug() << "message type is [CmpStatus]";
-//        for (QVariantMap::iterator it = statusList.begin(); it != statusList.end(); it++) {
-//            if (status[it.key()].toInt() < it.value().toInt()) {
-//                QVariantMap newMessage;
-//                newMessage["ChatText"] = messageList[it.key()][status[it.key()].toInt()];
-//                newMessage["Origin"] = it.key();
-//                newMessage["SeqNo"] = status[it.key()].toInt();
-//                sock->sendMessage(sender,senderPort, newMessage);
-//                QTimer::singleShot(2000, this, SLOT(checkReply()));
-//            }
-//        }
-//    }
     else {//TODO: to handle the information loss???
         qDebug() << "information dammaged!";
     }
@@ -299,11 +398,16 @@ void ChatDialog::processTheDatagram(const QByteArray& datagram, const QHostAddre
 
 void ChatDialog::doAntiEntropy(){
     qDebug() << "doAntiEntropy!!!!";
-    QVariantMap status;
-    status["Want"] = statusList;
+    QVariantMap statusl;
+    statusl["Want"] = statusList;
     for (QVariantMap::iterator it = statusList.begin(); it != statusList.end(); it++) {
-        status["Want"].toMap()[it.key()] = it.value().toInt() + 1;
+        statusl["Want"].toMap()[it.key()] = it.value().toInt() + 1;
     }
-    sock->sendMsg2RandomPeer(status);
+
+    QTime t= QTime::currentTime();
+    qsrand(t.msec()+t.second()*1000);
+    int pickNo = qrand() % neighbors.size();
+
+    sock->sendMessage(neighbors[pickNo].getIP(),neighbors[pickNo].getPort(),statusl);
     return;
 }

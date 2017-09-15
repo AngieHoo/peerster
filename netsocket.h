@@ -18,16 +18,9 @@ class NetSocket : public QUdpSocket
 public:
     NetSocket(QObject *parent = 0);
 
-    // Bind this socket to a Peerster-specific default port.
-    bool bind();
     void sendMessage(const QHostAddress& sender, const quint16 senderPort,const QVariantMap& message);
-    void sendMsg2RandomPeer(const QVariantMap& message);
+    bool bind(quint16 p);
 
-private:
-    int myPortMin, myPortMax, myPort;
-    QVector<int> neighbors;
-
-    void createNeighbors();
 };
 
 #endif // NETSOCKET_H

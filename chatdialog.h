@@ -2,14 +2,19 @@
 #define CHATDIALOG_H
 
 #include <QVBoxLayout>
+#include <QHBoxLayout>
 #include <QDialog>
 #include <QLineEdit>
 #include <QTimer>
+#include <QHostInfo>
+#include <QMessageBox>
+
 
 #include <qmath.h>
 
 #include "netsocket.h"
 #include "textinput.h"
+#include "peer.h"
 
 class ChatDialog : public QDialog
 {
@@ -21,16 +26,28 @@ public:
 public slots:
      void sendMyMsg2RandomPeer();
      void readPendingDatagrams();    
-
+    void lookedUp(const QHostInfo &host);
 private slots:
      void doAntiEntropy();
      void checkReply();
+     void addNeighbors();
 
+signals:
+     void finishLookUp();
 private:
-    QTextEdit* textview;
-    TextInput* textinput;
+    quint16 myPort;
+    quint16 myPortMin;
+    quint16 myPortMax;
+    QVector<Peer> neighbors;
     NetSocket* sock;
     QTimer* timer;
+
+    QTextEdit* textview;
+    TextInput* textinput;
+    QTextEdit* onlineNeighbor;
+    QLineEdit* neighborInput;
+    QHostInfo hostInfo;
+
 
     QString identity; // a random number that identifies a peer.
     quint32 mySeqNo; // they latest ID od message.
@@ -39,12 +56,15 @@ private:
     QMap<QString,QMap<quint32, QString>> messageList; // a list of received message; [<"tiger",[<1, "hello">, <2, "world">]]
 
     void processTheDatagram(const QByteArray& datagram, const QHostAddress& sender, const quint16& senderPort);
-    void flipCoins(const QString& originID,const quint32& SeqNo);
     void flipCoins();
     void sendStatus(const QHostAddress& sender, const quint16 senderPort,const QString& senderIdentity,const quint32& SeqNo);
     void sendStatusList(const QHostAddress& sender, const quint16 senderPort);
     void updateList(const QString& content,const QString& senderIdentity,const quint32& SeqNo);
     void brocastMessage(const QVariantMap& message);
+    void bind();
+
+    void creatLocalNeighbors();
+
 
 };
 

@@ -19,8 +19,10 @@ HEADERS += main.hh \
     textinput.h \
     library.h \
     netsocket.h \
-    chatdialog.h
+    chatdialog.h \
+    peer.h
 SOURCES += main.cc \
     textinput.cpp \
     netsocket.cpp \
-    chatdialog.cpp
+    chatdialog.cpp \
+    peer.cpp
