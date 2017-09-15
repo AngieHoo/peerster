@@ -4,6 +4,7 @@ ChatDialog::ChatDialog()
 {
     setWindowTitle("Peerster");
 
+    mySe = 0;
     QTime t = QTime::currentTime();
     qsrand(t.msec()+t.second()*1000);
     identity = QString::number(qrand());
@@ -107,16 +108,6 @@ void ChatDialog::lookedUp(const QHostInfo &host)
         return;
     }
     hostInfo = host;
-    //    foreach (const QHostAddress &address, host.addresses()) {
-    //        qDebug() << "Found neighbor's address!!!!" << address.toString();
-    //        if (address.protocol() == QAbstractSocket::IPv4Protocol)
-    //            qDebug() << "Found IPv4 address:" << address.toString();
-    //        else if (address.protocol() == QAbstractSocket::IPv6Protocol)
-    //            qDebug() << "Found IPv6 address:" << address.toString();
-    //        else
-    //            qDebug() << "Found other address:" << address.toString();
-    //        //TODO:
-    //    }
     emit finishLookUp();
 }
 
