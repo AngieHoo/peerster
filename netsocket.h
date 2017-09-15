@@ -14,6 +14,8 @@
 class NetSocket : public QUdpSocket
 {
     Q_OBJECT
+private slots:
+    //void readPendingDatagrams();
 
 public:
     NetSocket(QObject *parent = 0);

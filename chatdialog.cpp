@@ -70,10 +70,10 @@ ChatDialog::ChatDialog()
         checkInputNeighbor(address, port);
     }
 
-
     timer->start();
 
 }
+
 void ChatDialog::checkInputNeighbor(const QString& address,const quint16& port){
     QHostAddress self(QHostAddress::LocalHost);
     qDebug() << "Input Neighbor's Address: " << address << ", Port: " << port;
@@ -261,16 +261,18 @@ void ChatDialog::processTheDatagram(const QByteArray& datagram, const QHostAddre
 
     // need to tell if it is a status message or a ordinary message.
     qDebug() << "receive message from" << sender << ", port:" << senderPort;
-    QVariantMap message;
+
+    //QVariant tmp;
     QDataStream in(datagram);
-    QString messageType;
-    in >> messageType;
-    if (messageType == "Want") {// a status message
+    //in >> tmp;
+    //QVariantMap message = tmp.toMap();
+    QVariantMap message;
+    in >> message;
+    qDebug() << "complete message:" << message;
+    if (message.contains("Want")) {// a status message
         qDebug() << "the message type is [Status]";
-        QVariant tmp;
-        QVariantMap status;
-        in >> tmp;
-        status = tmp.toMap();
+        QVariantMap status;     
+        status = message["Want"].toMap();
         qDebug() << "sender'status: " << status;
         bool flagNew = false; // flag if i have some newer status to send to the sender.
         for (QVariantMap::iterator it = statusList.begin(); it != statusList.end(); it++) {
@@ -307,21 +309,11 @@ void ChatDialog::processTheDatagram(const QByteArray& datagram, const QHostAddre
         }
 
     }
-    else if (messageType == "ChatText") { // brocast message to a random neighbor
-        QString content,originKey, SeqNoKey, originID;
-        quint32 SeqNo;
-        QVariant tmp;
-        in >> tmp;
-        content = tmp.toString();
-        in >> originKey >> tmp;
-        originID = tmp.toString();
-        in >> SeqNoKey >> tmp;
-        SeqNo = tmp.toInt();
-        message[messageType] = content;
-        message[originKey] = originID;
-        message[SeqNoKey] = SeqNo;
-        qDebug() << "message type is [ChatText]:" << content <<"," << originKey << ":"<< originID << ", " << SeqNoKey<< ":" << SeqNo;
-
+    else if (message.contains("ChatText") && message.contains("Origin") && message.contains("SeqNo")) { // brocast message to a random neighbor
+        QString originID = message["Origin"].toString();
+        quint32 SeqNo = message["SeqNo"].toInt();
+        QString content = message["ChatText"].toString();
+        qDebug() << "message type is ChatText:" << content <<",OriginID:" << originID << ", SeqNo:" << SeqNo;
         if ((statusList[originID].toInt() + 1 == SeqNo)) {// i have never received this message, and that is what i want. the sequence of this message is right for me.
             qDebug() << "I receive a new message with the right sequence!";
             textview->append(content); // display this message.
@@ -339,6 +331,7 @@ void ChatDialog::processTheDatagram(const QByteArray& datagram, const QHostAddre
     }
 
     else {//TODO: to handle the information loss???
+        qDebug() << message.begin().key();
         qDebug() << "information dammaged!";
     }
 
