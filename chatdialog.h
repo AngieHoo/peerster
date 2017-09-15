@@ -62,6 +62,7 @@ private:
     void updateList(const QString& content,const QString& senderIdentity,const quint32& SeqNo);
     void brocastMessage(const QVariantMap& message);
     void bind();
+    void checkInputNeighbor(const QString& address,const quint16& post);
 
     void creatLocalNeighbors();
     bool addNeighbor(const Peer& newPeer);
