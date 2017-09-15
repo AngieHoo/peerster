@@ -49,7 +49,7 @@ ChatDialog::ChatDialog()
     connect(textinput, SIGNAL(returnPressed()), this, SLOT(sendMyMsg2RandomPeer()));
     connect(sock, SIGNAL(readyRead()), this, SLOT(readPendingDatagrams()));
     connect(timer, SIGNAL(timeout()), this, SLOT(doAntiEntropy()));
-    connect(neighborInput, SIGNAL(returnPressed()), this, SLOT(addNeighbors()));
+    connect(neighborInput, SIGNAL(returnPressed()), this, SLOT(tryAddNewNeighbor()));
 
     qDebug() << "Localhost name:" << QHostInfo::localHostName();
 
@@ -60,7 +60,7 @@ ChatDialog::ChatDialog()
     
 }
 
-void ChatDialog::addNeighbors(){
+void ChatDialog::tryAddNewNeighbor(){
     QHostAddress self(QHostAddress::LocalHost);
     QString str = neighborInput->text();
     QString address = str.left(str.indexOf(':'));
@@ -68,19 +68,14 @@ void ChatDialog::addNeighbors(){
     qDebug() << "Input Neighbor's Address: " << address << ", Port: " << port;
     QHostAddress testIP;
     if (testIP.setAddress(address)){ // is a IP address.
-        if (testIP.toIPv4Address() != self.toIPv4Address() || port != myPort) {
-            QHostInfo host = QHostInfo::fromName(address);
-            if (host.error() != QHostInfo::NoError) {
-                qDebug() << "Lookup failed:" << host.errorString();
-                return;
-            }
-            qDebug() << "Found hostName:" << host.hostName();
-
-            neighbors.push_back(Peer(host.hostName(), testIP, port));
-            onlineNeighbor->append(host.hostName() + "(" + testIP.toString() + ")" + ":" + QString::number(port));
+        QHostInfo host = QHostInfo::fromName(address);
+        if (host.error() != QHostInfo::NoError) {
+            qDebug() << "Lookup failed:" << host.errorString();
         }
         else {
-            QMessageBox::about(NULL, "Warning", "Please don't add yourself!");
+            qDebug() << "Found hostName:" << host.hostName();
+            if (addNeighbor(Peer(host.hostName(), testIP, port))) //check if it is myself or exist in neighbor list. if not add it.
+                onlineNeighbor->append(host.hostName() + "(" + testIP .toString() + ")" + ":" + QString::number(port));
         }
     }
     else {
@@ -88,16 +83,10 @@ void ChatDialog::addNeighbors(){
         connect(this, SIGNAL(finishLookUp()), &eventloop,SLOT(quit()));
         int id = QHostInfo::lookupHost(address, this, SLOT(lookedUp(QHostInfo)));
         eventloop.exec();
-        if (hostInfo.addresses().size() > 0) {// success!
-            if (hostInfo.addresses().at(0) .toIPv4Address() != self.toIPv4Address() || port != myPort) {
-                qDebug() <<  "Congradulation! we sccessfully add the neighbor!!!!!!";
-                neighbors.push_back(Peer(hostInfo.hostName(), hostInfo.addresses().at(0), port));
+        //if (hostInfo.error() != QHostInfo::NoError) {// success!
+        if (hostInfo.addresses().size() > 0) {
+            if (addNeighbor(Peer(hostInfo.hostName(), hostInfo.addresses().at(0), port)))
                 onlineNeighbor->append(address + "(" + hostInfo.addresses().at(0).toString() + ")"+ ":" + QString::number(port));
-                qDebug() << "the neigbor's Address is:" << hostInfo.addresses();
-            }
-            else {
-                QMessageBox::about(NULL, "Warning", "Please don't add yourself!");
-            }
         }
         else{
             QMessageBox::about(NULL, "Warning", "Invalid Address!");
@@ -106,6 +95,7 @@ void ChatDialog::addNeighbors(){
     neighborInput->clear();
     return;
 }
+
 
 void ChatDialog::lookedUp(const QHostInfo &host)
 {
@@ -252,27 +242,18 @@ void ChatDialog::sendStatusList(const QHostAddress& sender, const quint16 sender
 }
 
 void ChatDialog::processTheDatagram(const QByteArray& datagram, const QHostAddress& sender, const quint16& senderPort) {
-
-    // we first check is the sender is a new neighbor:
-    bool isNewNeighbor = true;
     qDebug() << "senderIP:" << sender.toIPv4Address() << ", port:" << senderPort;
-    for (QVector<Peer>::iterator it = neighbors.begin(); it != neighbors.end(); it++) {
-        qDebug() << "my IP: " << it->getIP().toIPv4Address() << ", PORT:" << it->getPort();
-        if (it->getIP().toIPv4Address() == sender.toIPv4Address() && it->getPort() == senderPort) {
-            isNewNeighbor = false;
-            break;
-        }
+
+    // check if the sender is my neighbor, if not, add it into my neighbor list.
+    QHostInfo host = QHostInfo::fromName(sender.toString());
+    if (host.error() != QHostInfo::NoError) {
+        qDebug() << "Lookup failed:" << host.errorString();
+        return;
     }
-    if (isNewNeighbor) { // add this new neighbors.
-        QHostInfo host = QHostInfo::fromName(sender.toString());
-        if (host.error() != QHostInfo::NoError) {
-            qDebug() << "Lookup failed:" << host.errorString();
-            return;
-        }
-        qDebug() << "Here comes a new neighbor!!!" << host.hostName();
-        neighbors.push_back(Peer(host.hostName(), sender, senderPort));
+    qDebug() << "check if the sender has been my neighbor." << host.hostName();
+    if (addNeighbor(Peer(host.hostName(), sender, senderPort)))
         onlineNeighbor->append(host.hostName() + "(" + sender.toString() + ")" + ":" + QString::number(senderPort));
-    }
+
 
     // need to tell if it is a status message or a ordinary message.
     qDebug() << "receive message from" << sender << ", port:" << senderPort;
@@ -286,6 +267,7 @@ void ChatDialog::processTheDatagram(const QByteArray& datagram, const QHostAddre
         QVariantMap status;
         in >> tmp;
         status = tmp.toMap();
+        qDebug() << "sender'status: " << status;
         bool flagNew = false; // flag if i have some newer status to send to the sender.
         for (QVariantMap::iterator it = statusList.begin(); it != statusList.end(); it++) {
             if (status[it.key()].toInt() <= it.value().toInt()) {
@@ -421,4 +403,22 @@ void ChatDialog::doAntiEntropy(){
 
     sock->sendMessage(neighbors[pickNo].getIP(),neighbors[pickNo].getPort(),statusl);
     return;
+}
+
+bool ChatDialog::addNeighbor(const Peer& newPeer){
+    QHostAddress self(QHostAddress::LocalHost);
+    if (newPeer.getIP().toIPv4Address() == self.toIPv4Address() && newPeer.getPort() == myPort) {
+        QMessageBox::about(NULL, "Warning", "Please don't add yourself!");
+        return false;
+    }
+    for (QVector<Peer>::iterator it = neighbors.begin(); it != neighbors.end(); it++) {
+        if (it->getIP().toIPv4Address() == newPeer.getIP().toIPv4Address() && it->getPort() == newPeer.getPort()) {
+            //QMessageBox::about(NULL, "Warning", "You already have this neighbor!!");
+            return false;
+        }
+    }
+    qDebug() <<  "Congradulation! we sccessfully add the neighbor!!!!!!";
+    qDebug() << "the neigbor's Address is:" << newPeer.getIP();
+    neighbors.push_back(newPeer);
+    return true;
 }

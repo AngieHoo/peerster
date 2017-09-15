@@ -30,7 +30,7 @@ public slots:
 private slots:
      void doAntiEntropy();
      void checkReply();
-     void addNeighbors();
+     void tryAddNewNeighbor();
 
 signals:
      void finishLookUp();
@@ -64,6 +64,7 @@ private:
     void bind();
 
     void creatLocalNeighbors();
+    bool addNeighbor(const Peer& newPeer);
 
 
 };

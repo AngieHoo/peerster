@@ -9,14 +9,14 @@ Peer::Peer(){
     Port = -1;
 }
 
-QString Peer::getDNS(){
+QString Peer::getDNS() const {
     return DNS;
 }
-QHostAddress Peer::getIP(){
+QHostAddress Peer::getIP() const {
     return IP;
 }
 
-quint16 Peer::getPort(){
+quint16 Peer::getPort() const {
     return Port;
 }
 
