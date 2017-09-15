@@ -61,21 +61,27 @@ ChatDialog::ChatDialog()
 }
 
 void ChatDialog::addNeighbors(){
+    QHostAddress self(QHostAddress::LocalHost);
     QString str = neighborInput->text();
     QString address = str.left(str.indexOf(':'));
     quint16 port = str.mid(str.indexOf(':') + 1).toInt();
     qDebug() << "Input Neighbor's Address: " << address << ", Port: " << port;
     QHostAddress testIP;
     if (testIP.setAddress(address)){ // is a IP address.
-        QHostInfo host = QHostInfo::fromName(address);
-        if (host.error() != QHostInfo::NoError) {
-            qDebug() << "Lookup failed:" << host.errorString();
-            return;
-        }
-        qDebug() << "Found hostName:" << host.hostName();
-        neighbors.push_back(Peer(host.hostName(), testIP, port));
-        onlineNeighbor->append(host.hostName() + "(" + testIP.toString() + ")" + ":" + QString::number(port));
+        if (testIP.toIPv4Address() != self.toIPv4Address() || port != myPort) {
+            QHostInfo host = QHostInfo::fromName(address);
+            if (host.error() != QHostInfo::NoError) {
+                qDebug() << "Lookup failed:" << host.errorString();
+                return;
+            }
+            qDebug() << "Found hostName:" << host.hostName();
 
+            neighbors.push_back(Peer(host.hostName(), testIP, port));
+            onlineNeighbor->append(host.hostName() + "(" + testIP.toString() + ")" + ":" + QString::number(port));
+        }
+        else {
+            QMessageBox::about(NULL, "Warning", "Please don't add yourself!");
+        }
     }
     else {
         QEventLoop eventloop;
@@ -83,10 +89,15 @@ void ChatDialog::addNeighbors(){
         int id = QHostInfo::lookupHost(address, this, SLOT(lookedUp(QHostInfo)));
         eventloop.exec();
         if (hostInfo.addresses().size() > 0) {// success!
-            qDebug() <<  "Congradulation! we sccessfully add the neighbor!!!!!!";
-            neighbors.push_back(Peer(hostInfo.hostName(), hostInfo.addresses().at(0), port));
-            onlineNeighbor->append(address + "(" + hostInfo.addresses().at(0).toString() + ")"+ ":" + QString::number(port));
-            qDebug() << "the neigbor's Address is:" << hostInfo.addresses();
+            if (hostInfo.addresses().at(0) .toIPv4Address() != self.toIPv4Address() || port != myPort) {
+                qDebug() <<  "Congradulation! we sccessfully add the neighbor!!!!!!";
+                neighbors.push_back(Peer(hostInfo.hostName(), hostInfo.addresses().at(0), port));
+                onlineNeighbor->append(address + "(" + hostInfo.addresses().at(0).toString() + ")"+ ":" + QString::number(port));
+                qDebug() << "the neigbor's Address is:" << hostInfo.addresses();
+            }
+            else {
+                QMessageBox::about(NULL, "Warning", "Please don't add yourself!");
+            }
         }
         else{
             QMessageBox::about(NULL, "Warning", "Invalid Address!");
@@ -106,16 +117,16 @@ void ChatDialog::lookedUp(const QHostInfo &host)
         return;
     }
     hostInfo = host;
-//    foreach (const QHostAddress &address, host.addresses()) {
-//        qDebug() << "Found neighbor's address!!!!" << address.toString();
-//        if (address.protocol() == QAbstractSocket::IPv4Protocol)
-//            qDebug() << "Found IPv4 address:" << address.toString();
-//        else if (address.protocol() == QAbstractSocket::IPv6Protocol)
-//            qDebug() << "Found IPv6 address:" << address.toString();
-//        else
-//            qDebug() << "Found other address:" << address.toString();
-//        //TODO:
-//    }
+    //    foreach (const QHostAddress &address, host.addresses()) {
+    //        qDebug() << "Found neighbor's address!!!!" << address.toString();
+    //        if (address.protocol() == QAbstractSocket::IPv4Protocol)
+    //            qDebug() << "Found IPv4 address:" << address.toString();
+    //        else if (address.protocol() == QAbstractSocket::IPv6Protocol)
+    //            qDebug() << "Found IPv6 address:" << address.toString();
+    //        else
+    //            qDebug() << "Found other address:" << address.toString();
+    //        //TODO:
+    //    }
     emit finishLookUp();
 }
 
