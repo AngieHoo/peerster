@@ -4,7 +4,7 @@
 #include <QTimer>
 #include <QHostInfo>
 #include <QMessageBox>
-#include <Qvector>
+#include <QVector>
 #include <unistd.h>
 #include <QTime>
 
