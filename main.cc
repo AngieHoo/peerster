@@ -1,5 +1,4 @@
-
-#include "main.hh"
+#include "chatdialog.h"
 
 int main(int argc, char **argv)
 {
@@ -9,6 +8,7 @@ int main(int argc, char **argv)
     // Create an initial chat dialog window
     ChatDialog dialog;
     dialog.show();
+
 
     return app.exec();
 }

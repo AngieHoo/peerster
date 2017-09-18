@@ -6,8 +6,6 @@
 #include <QApplication>
 #include <QDebug>
 #include <QDataStream>
-#include <unistd.h>
-#include <QTime>
 
 //#include <QHostInfo>
 
@@ -15,11 +13,13 @@ class NetSocket : public QUdpSocket
 {
     Q_OBJECT
 private slots:
-    //void readPendingDatagrams();
+    void readPendingDatagrams();
+
+signals:
+    void processTheDatagram(const QByteArray&, const QHostAddress& , const quint16&);
 
 public:
     NetSocket(QObject *parent = 0);
-
     void sendMessage(const QHostAddress& sender, quint16 senderPort,const QVariantMap& message);
     bool bind(quint16 p);
 
