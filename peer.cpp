@@ -1,7 +1,11 @@
 #include "peer.h"
 
-Peer::Peer(const QString& DNS, const QHostAddress& IP, const quint16& Port)
-    : DNS(DNS), IP(IP), Port(Port){}
+Peer::Peer(const QString& DNS, const QHostAddress& IP, const quint16& Port, QObject *parent, const QVariantMap& message)
+    : QObject(parent), DNS(DNS), IP(IP), Port(Port){
+    timer.setSingleShot(true);
+    timer.setInterval(2000);
+    connect(&timer, SIGNAL(timeout()), this, SLOT(sendTimeOutMsg()));
+}
 
 Peer::Peer(){
     DNS = QHostInfo::localHostName();
@@ -9,9 +13,11 @@ Peer::Peer(){
     Port = -1;
 }
 
+
 QString Peer::getDNS() const {
     return DNS;
 }
+
 QHostAddress Peer::getIP() const {
     return IP;
 }
@@ -31,6 +37,27 @@ void Peer::setIP(const QHostAddress& IP){
 void Peer::SetPort(const quint16& Port){
     this->Port = Port;
 }
+
+
+void Peer::sendTimeOutMsg(){
+    emit timerOut(this);
+}
+void Peer::startTimer(){
+    timer.start();
+}
+
+void Peer::stopTimer(){
+    timer.stop();
+}
+
+void Peer::setMessage(const QVariantMap& message){
+    this->message = message;
+}
+
+QVariantMap Peer::getMessage() const{
+    return message;
+}
+
 
 
 

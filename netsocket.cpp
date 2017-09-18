@@ -14,18 +14,18 @@ bool NetSocket::bind(quint16 p)
     return false;
 }
 
-//void NetSocket::readPendingDatagrams() {
-//    while (sock->hasPendingDatagrams()) {
-//        QByteArray datagram;
-//        datagram.resize(sock->pendingDatagramSize());
-//        QHostAddress sender;
-//        quint16 senderPort;
-//        sock->readDatagram(datagram.data(), datagram.size(),
-//                           &sender, &senderPort);
-//        processTheDatagram(datagram, sender, senderPort);
-//    }
-//    return;
-//}
+void NetSocket::readPendingDatagrams() {
+    while (hasPendingDatagrams()) {
+        QByteArray datagram;
+        datagram.resize(pendingDatagramSize());
+        QHostAddress IP;
+        quint16 Port;
+        readDatagram(datagram.data(), datagram.size(),
+                           &IP, &Port);
+        emit processTheDatagram(datagram, IP, Port);
+    }
+    return;
+}
 
 void NetSocket::sendMessage(const QHostAddress& sender, quint16 senderPort,const QVariantMap& message) {
     QByteArray data;
