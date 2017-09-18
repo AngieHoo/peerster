@@ -4,7 +4,7 @@
 #include <QTimer>
 #include <QHostInfo>
 #include <QMessageBox>
-#include <Qvector>
+#include <QVector>
 
 #include "model.h"
 #include "netsocket.h"
