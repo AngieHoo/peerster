@@ -56,7 +56,6 @@ void Control::checkInputNeighbor(const QString& address,const quint16& port){
             if (model->isValidNewComer(host.hostName(), testIP, port)) {
                 Peer* peer = model->addNeighbor(host.hostName(), testIP, port);
                 connect(peer, SIGNAL(timerOut(const Peer*)),this, SLOT(processNoReply(const Peer*)));
-
             }
         }
     }
@@ -65,13 +64,11 @@ void Control::checkInputNeighbor(const QString& address,const quint16& port){
         connect(this, SIGNAL(finishLookUp()), &eventloop,SLOT(quit()));
         int id = QHostInfo::lookupHost(address, this, SLOT(lookedUp(QHostInfo)));
         eventloop.exec();
-        //if (hostInfo.error() != QHostInfo::NoError) {// success!
         if (hostInfo.addresses().size() > 0) {
             qDebug()  << hostInfo.addresses().at(0)  << ", Port: " << port;
             if (model->isValidNewComer(hostInfo.hostName(), hostInfo.addresses().at(0), port)) {
                 Peer* peer = model->addNeighbor(hostInfo.hostName(), hostInfo.addresses().at(0), port);
                 connect(peer, SIGNAL(timerOut(const Peer*)),this, SLOT(processNoReply(const Peer*)));
-                //displayNewNeighbor(hostInfo.hostName(), hostInfo.addresses().at(0), port);
             }
         }
         else{
@@ -220,7 +217,7 @@ void Control::processTheDatagram(const QByteArray& datagram, const QHostAddress&
         qDebug() << "message type is ChatText:" << content <<",OriginID:" << originID << ", SeqNo:" << SeqNo;
         if ((myStatuslist[originID].toInt() + 1 == SeqNo)) {// i have never received this message, and that is what i want. the sequence of this message is right for me.
             qDebug() << "I receive a new message with the right sequence!";
-            emit displayNewMessage(content);
+            emit displayNewMessage(originID + ":" + content);
             model->receiveNewMessage(content, originID);
             brocastMessage(message); // send message to a random neighbor.
         }
@@ -237,4 +234,8 @@ void Control::processTheDatagram(const QByteArray& datagram, const QHostAddress&
         qDebug() << "information dammaged!";
     }
     return;
+}
+
+QString Control::getIdentity(){
+    return model->getIdentity();
 }

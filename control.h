@@ -17,6 +17,7 @@ public:
     void checkInputNeighbor(const QString& address,const quint16& post);//done
     void sendMyMessage(const QString& content);
     void start();
+    QString getIdentity();
 
 public slots:
     void processTheDatagram(const QByteArray&, const QHostAddress&, const quint16&);

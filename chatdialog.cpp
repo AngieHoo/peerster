@@ -50,7 +50,7 @@ ChatDialog::ChatDialog()
 //Private slots:
 void ChatDialog::sendMyMessage() {
     control->sendMyMessage(textinput->toPlainText());
-    textview->append(textinput->toPlainText());
+    textview->append(control->getIdentity() + ":" + textinput->toPlainText());
     textinput->clear();
     return;
 }
