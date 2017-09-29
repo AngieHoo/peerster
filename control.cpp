@@ -11,9 +11,11 @@ Control::Control(QObject *parent) : QObject(parent)
 
     timer = new QTimer(this);
     timer->setInterval(10000);
+    timerRoute = new QTimer(this);
+    timerRoute->setInterval(6000);
 
     connect(timer, SIGNAL(timeout()), this, SLOT(doAntiEntropy()));
-
+    connect(timer, SIGNAL(timeout()), this, SLOT(sendRouteMessage()));
 
 }
 
@@ -21,6 +23,7 @@ void Control::start(){
      bind();
      model->creatLocalNeighbors();
      timer->start();
+     timerRoute->start();
 
      QStringList commond = QCoreApplication::arguments();
      if (commond.size() > 1 && commond[1] != ""){
@@ -29,6 +32,7 @@ void Control::start(){
          quint16 port = originNeighbor.mid(originNeighbor.indexOf(':') + 1).toInt();
          checkInputNeighbor(address, port);
      }
+     sendRouteMessage();
 }
 
 void Control::bind(){
@@ -78,14 +82,13 @@ void Control::checkInputNeighbor(const QString& address,const quint16& port){
 }
 
 void Control::sendMyMessage(const QString& content) {
-    model->sendMyMessage(content);
-
+    model->addMyMessage(content);
     QVariantMap message;
     message["ChatText"] = content;
     message["Origin"] = model->getIdentity();
     message["SeqNo"] = model->getMySeqNo();
-
     brocastMessage(message);
+    sendRouteMessage();
     return;
 }
 
@@ -105,6 +108,110 @@ void Control::brocastMessage(const QVariantMap& message) {
     qDebug() << "pick peer:" << randomPeer->getIP() << randomPeer->getPort();
     sendMsg2Peer(randomPeer, message);
     return;
+}
+
+void Control::sendMyPrivateMessage(const QString &content)
+{
+    sendPrivateMessage(model->getPrivateChattingPeer(), model->getIdentity(), content, 10);
+}
+
+void Control::sendPrivateMessage(const QString &destinationID, const QString &originID, const QString &content, int hop)
+{
+    QVariantMap message;
+    message["Dest"] = destinationID;
+    message["Origin"] = originID;
+    message["ChatText"] = content;
+    message["HopLimit"] = hop;
+    QHostAddress IP = model->getRoutingTable()[destinationID].first;
+    quint16 port = model->getRoutingTable()[destinationID].second;
+    sock->sendMessage(IP, port, message);
+}
+
+void Control::processStatusMessage(const QVariantMap &myStatuslist, const QVariantMap &message, const QHostAddress& IP, const quint16& port)
+{
+    qDebug() << "the message type is [Status]";
+
+    // stop the sender's timer:
+    Peer* peer = model->getNeighbor(IP, port);
+    peer->stopTimer();
+
+    QVariantMap senerStatusList;
+    senerStatusList = message["Want"].toMap();
+    qDebug() << "sender status: " << senerStatusList;
+    bool flagNew = false; // flag if i have some newer status to send to the IP.
+    for (QVariantMap::const_iterator it = myStatuslist.begin(); it != myStatuslist.end(); it++) {
+        int seq = senerStatusList[it.key()].toInt() == 0 ? 1 : senerStatusList[it.key()].toInt();
+        if (seq <= it.value().toInt()) {
+            sendOriginMessage(IP, port, model->getMessagelist()[it.key()][seq], it.key(), seq);
+            qDebug() << "I send him my new message. my status:" << myStatuslist;
+        }
+    }
+    if (flagNew) return;
+    else{ // if I have nothing new for the IP, then check if the IP contains new message that i have not received
+        for (QVariantMap::iterator it = senerStatusList.begin(); it != senerStatusList.end(); it++) {
+            if (myStatuslist[it.key()].toInt() + 1 < it.value().toInt()) { // the IP's status is newer than mine.
+                qDebug() << "send my status for newer message.";
+                sendMyStatusList(IP, port);
+                return;
+            }
+        }
+        flipCoins(); //we have exactly the same status, I pick up a random neighbor to send my status to it.
+    }
+}
+
+void Control::processGroupChatMessage(const QVariantMap &myStatuslist, const QVariantMap &message, const QHostAddress& IP, const quint16& port)
+{
+    QString originID = message["Origin"].toString();
+    quint32 SeqNo = message["SeqNo"].toInt();
+    QString content = message["ChatText"].toString();
+    qDebug() << "message type is ChatText:" << content <<",OriginID:" << originID << ", SeqNo:" << SeqNo;
+    if (myStatuslist[originID].toInt() + 1 <= SeqNo) {
+        if (!model->getRoutingTable().count(originID)  && originID != model->getIdentity()) // new orignID
+            emit comeNewOriginID(originID);
+        model->updateRoutingTable(originID, IP, port);
+        brocastMessage(message); // send message to a random neighbor.
+        if (myStatuslist[originID].toInt() + 1 == SeqNo) {
+            emit displayNewMessage(originID + ":" + content);
+            model->receiveNewMessage(content, originID);
+            qDebug() << "I receive a new message with the right sequence!";
+        }
+    }
+    sendMyStatusList(IP, port);// reply my statuslist;
+}
+
+void Control::processPrivateMessage(const QVariantMap &myStatuslist, const QVariantMap &message, const QHostAddress& IP, const quint16& port)
+{
+
+    QString destID = message["Dest"].toString();
+    QString originID = message["Origin"].toString();
+    QString content = message["ChatText"].toString();
+    int hotLimit = message["HotLimit"].toInt();
+
+    qDebug() << "message type is privateMessage:" << content << ", DestID: " << destID << "OriginID:" << originID;
+
+    if (destID == model->getIdentity()) {
+        emit displayNewMessage(originID + ":" + content);
+        return;
+    }
+
+    if (hotLimit < 1) return;
+
+    hotLimit--;
+    sendPrivateMessage(destID, originID, content, hotLimit);
+
+}
+
+void Control::processRouteMessage(const QVariantMap &myStatuslist, const QVariantMap &message, const QHostAddress &IP, const quint16 &port)
+{
+    QString originID = message["Origin"].toString();
+    quint32 SeqNo = message["SeqNo"].toInt();
+    qDebug() << "message type is RouteMessage:" << "OriginID:" << originID << ", SeqNo:" << SeqNo;
+    if (myStatuslist[originID].toInt() + 1 <= SeqNo) {
+        if (!model->getRoutingTable().count(originID) && originID != model->getIdentity()) // new orignID
+            emit comeNewOriginID(originID);
+        model->updateRoutingTable(originID, IP, port);
+        brocastMessage(message); // brocast route message
+    }
 }
 
 void Control::sendMsg2Peer(Peer* peer, const QVariantMap& message) {
@@ -139,7 +246,6 @@ void Control::lookedUp(const QHostInfo &host)
 {
     hostInfo = host;
     if (host.error() != QHostInfo::NoError) {
-
         qDebug() << "Lookup failed:" << host.errorString();
         emit finishLookUp();
         return;
@@ -153,10 +259,23 @@ void Control::doAntiEntropy(){
     sendMyStatusList(peer->getIP(), peer->getPort());
 }
 
+void Control::sendRouteMessage()
+{
+    QVariantMap routeMessage;
+    routeMessage["Origin"] = model->getIdentity();
+    routeMessage["SeqNo"] = model->getMySeqNo() + 1;
+    brocastMessage(routeMessage);
+}
+
 void Control::processNoReply(const Peer* peer){
     QVariantMap message = peer->getMessage();
     Peer* p = model->getPeerRandomly();
     sendMsg2Peer(p, message);
+}
+
+void Control::addPrivateChatPeer(const QString & p)
+{
+    model->setPrivateChattingPeer(p);
 }
 
 void Control::processTheDatagram(const QByteArray& datagram, const QHostAddress& IP, const quint16& port) {
@@ -179,55 +298,20 @@ void Control::processTheDatagram(const QByteArray& datagram, const QHostAddress&
     QDataStream in(datagram);
     QVariantMap message, myStatuslist = model->getStatusList();
     in >> message;
+
     if (message.contains("Want")) {// a status message
-        qDebug() << "the message type is [Status]";
-
-        // stop the sender's timer:
-        Peer* peer = model->getNeighbor(IP, port);
-        peer->stopTimer();
-
-        QVariantMap senerStatusList;
-        senerStatusList = message["Want"].toMap();
-        qDebug() << "sender status: " << senerStatusList;
-        bool flagNew = false; // flag if i have some newer status to send to the IP.
-        for (QVariantMap::iterator it = myStatuslist.begin(); it != myStatuslist.end(); it++) {
-            int seq = senerStatusList[it.key()].toInt() == 0 ? 1 : senerStatusList[it.key()].toInt();
-            if (seq <= it.value().toInt()) {
-                sendOriginMessage(IP, port, model->getMessagelist()[it.key()][seq], it.key(), seq);
-                qDebug() << "I send him my new message. my status:" << myStatuslist;
-            }
-        }
-        if (flagNew) return;
-        else{ // if I have nothing new for the IP, then check if the IP contains new message that i have not received
-            for (QVariantMap::iterator it = senerStatusList.begin(); it != senerStatusList.end(); it++) {
-                if (myStatuslist[it.key()].toInt() + 1 < it.value().toInt()) { // the IP's status is newer than mine.
-                    qDebug() << "send my status for newer message.";
-                    sendMyStatusList(IP, port);
-                    return;
-                }
-            }
-            flipCoins(); //we have exactly the same status, I pick up a random neighbor to send my status to it.
-        }
-
+       processStatusMessage(myStatuslist,message, IP, port);
     }
-    else if (message.contains("ChatText") && message.contains("Origin") && message.contains("SeqNo")) { // brocast message to a random neighbor
-        QString originID = message["Origin"].toString();
-        quint32 SeqNo = message["SeqNo"].toInt();
-        QString content = message["ChatText"].toString();
-        qDebug() << "message type is ChatText:" << content <<",OriginID:" << originID << ", SeqNo:" << SeqNo;
-        if ((myStatuslist[originID].toInt() + 1 == SeqNo)) {// i have never received this message, and that is what i want. the sequence of this message is right for me.
-            qDebug() << "I receive a new message with the right sequence!";
-            emit displayNewMessage(originID + ":" + content);
-            model->receiveNewMessage(content, originID);
-            brocastMessage(message); // send message to a random neighbor.
-        }
-        else if (myStatuslist[originID].toInt() + 1 < SeqNo){
-            qDebug() << "I receive a useless new message....."    ;
-            // i've never received this message, but its sequence is not what i want, so i requare IP to send me the right sequence of message.
-            //i won't display this message. but i will still brocast it.
-            brocastMessage(message); // send message to a random neighbor.
-        }
-        sendMyStatusList(IP, port);// reply my statuslist;
+    else if (message.contains("ChatText") && message.contains("Origin")
+             && message.contains("SeqNo")) { // brocast message to a random neighbor
+       processGroupChatMessage(myStatuslist,message, IP, port);
+    }
+    else if (message.contains("Origin") && message.contains("SeqNo")) {
+        processRouteMessage(myStatuslist,message, IP, port);
+    }
+    else if (message.contains("Dest") && message.contains("Origin")
+             && message.contains("ChatText") && message.contains("HopLimit")) {
+        processPrivateMessage(myStatuslist,message, IP, port);
     }
     else {
         qDebug() << message.begin().key();

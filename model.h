@@ -18,18 +18,22 @@ public:
     quint16 getMyPortMin() const;
     quint16 getMyPort() const;
     quint16 getMyPortMax() const;
-    QString getIdentity() const;
     quint32 getMySeqNo() const;
     Peer* getPeerRandomly() const;
-    QVariantMap getStatusList() const;
-    QMap<QString,QMap<quint32, QString>> getMessagelist() const;
+    const QString& getIdentity() const;
+    const QVariantMap& getStatusList() const;
+    const QHash<QString, QPair<QHostAddress,quint16>>&  getRoutingTable() const;
+    const QMap<QString,QMap<quint32, QString>>& getMessagelist() const;
+    const QString getPrivateChattingPeer() const;
     void setMyPort(quint16);
     void setMyPortMin(quint16);
     void setMyPortMax(quint16);
+    void setPrivateChattingPeer(const QString&);
+    void updateRoutingTable(const QString& originID, const QHostAddress& senderIP, quint16 senderPort);
     Peer* addNeighbor(const QString&, const QHostAddress&, const quint16&);
     Peer* getNeighbor(const QHostAddress& IP, const quint16& Port);
     bool isValidNewComer(const QString&, const QHostAddress&, const quint16&);
-    void sendMyMessage(const QString&);
+    void addMyMessage(const QString&);
     void receiveNewMessage(const QString&, const QString&);
     void creatLocalNeighbors();
 
@@ -44,13 +48,14 @@ private:
     quint16 myPortMin;
     quint16 myPortMax;
     QVector<Peer*> neighbors;
-
+    QString privateChatDestID;
 
     QString identity; // a random number that identifies a peer.
     quint32 mySeqNo; // they latest ID od message.
 
     QVariantMap statusList; // a list of status. <"tiger",4>
-    QMap<QString,QMap<quint32, QString>> messageList; // a list of received message; [<"tiger",[<1, "hello">, <2, "world">]]
+    QMap<QString,QMap<quint32, QString>> messageList; // a list of received message; [<"tiger",[<1, "hello">, <2, "world">]]  
+    QHash<QString, QPair<QHostAddress,quint16>> routingTable;
 
 };
 

@@ -17,34 +17,49 @@ public:
     void checkInputNeighbor(const QString& address,const quint16& post);//done
     void sendMyMessage(const QString& content);
     void start();
+    void addPrivateChatPeer(const QString&);
+    void sendMyPrivateMessage(const QString& content);
     QString getIdentity();
 
 public slots:
     void processTheDatagram(const QByteArray&, const QHostAddress&, const quint16&);
     void processNoReply(const Peer*);
 
+
 private slots:
      void lookedUp(const QHostInfo &host);
      void doAntiEntropy();
-
+     void sendRouteMessage();
 
 signals:
     void displayNewNeighbor(const QString&, const QHostAddress&, const quint16&); // check
     void displayNewMessage(const QString&);//check
     void finishLookUp();
+    void comeNewOriginID(const QString&);
 
 private:
      Model* model;
      NetSocket* sock;
      QTimer* timer;
+     QTimer* timerRoute;
      QHostInfo hostInfo;
+
+
      void bind();
 
      void sendMsg2Peer(Peer*, const QVariantMap&); // check
      void sendOriginMessage(const QHostAddress&, const quint16&, const QString&, const QString&,const quint32&);//
-     void sendMyStatusList(const QHostAddress& sender, const quint16 senderPort);//
-     void flipCoins();
+     void sendMyStatusList(const QHostAddress& sender, const quint16 senderPort);//    
      void brocastMessage(const QVariantMap& message);
+
+     void sendPrivateMessage(const QString& destinationID, const QString &originID, const QString& content, int hop);
+
+     void flipCoins();
+
+     void processStatusMessage(const QVariantMap &myStatuslist, const QVariantMap &message, const QHostAddress& IP, const quint16& port);
+     void processGroupChatMessage(const QVariantMap &myStatuslist, const QVariantMap &message, const QHostAddress& IP, const quint16& port);
+     void processPrivateMessage(const QVariantMap &myStatuslist, const QVariantMap &message, const QHostAddress& IP, const quint16& port);
+     void processRouteMessage(const QVariantMap &myStatuslist, const QVariantMap &message, const QHostAddress& IP, const quint16& port);
 
 };
 

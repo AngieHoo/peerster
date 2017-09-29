@@ -13,11 +13,16 @@ Model::Model(QObject *parent) : QObject(parent)
    // connect(this, SIGNAL(test()),this, SLOT(respondtest()));
 
 }
-QVariantMap Model::getStatusList() const{
+const QVariantMap& Model::getStatusList() const{
     return statusList;
 }
-QMap<QString,QMap<quint32, QString>> Model::getMessagelist() const{
+const QMap<QString,QMap<quint32, QString>>& Model::getMessagelist() const{
     return messageList;
+}
+
+const QString Model::getPrivateChattingPeer() const
+{
+    return privateChatDestID;
 }
 Peer* Model::getPeerRandomly() const{
     QTime t= QTime::currentTime();
@@ -25,12 +30,18 @@ Peer* Model::getPeerRandomly() const{
     int pickNo = qrand() % neighbors.size();
     return neighbors[pickNo];
 }
-QString Model::getIdentity() const{
+
+const QString& Model::getIdentity() const{
     return identity;
 }
 
 quint32 Model::getMySeqNo() const{
     return mySeqNo;
+}
+
+const QHash<QString, QPair<QHostAddress, quint16> >& Model::getRoutingTable() const
+{
+    return routingTable;
 }
 
 quint16 Model::getMyPortMin() const{
@@ -52,6 +63,17 @@ void Model::setMyPortMin(quint16 p){
 
 void Model::setMyPortMax(quint16 p){
     myPortMax = p;
+}
+
+void Model::setPrivateChattingPeer(const QString & pcp)
+{
+    privateChatDestID = pcp;
+}
+
+void Model::updateRoutingTable(const QString &originID, const QHostAddress &senderIP, quint16 senderPort)
+{
+    routingTable[originID].first = senderIP;
+    routingTable[originID].second = senderPort;
 }
 
 bool Model::isValidNewComer(const QString& DNS, const QHostAddress& IP, const quint16& Port){
@@ -84,8 +106,7 @@ Peer* Model::getNeighbor(const QHostAddress& IP, const quint16& Port){
     return NULL;
 }
 
-void Model::sendMyMessage(const QString& content){
-
+void Model::addMyMessage(const QString& content){
     mySeqNo++;
     statusList[identity] = mySeqNo;
     messageList[identity][mySeqNo] = content;
