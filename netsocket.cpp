@@ -31,8 +31,8 @@ void NetSocket::sendMessage(const QHostAddress& sender, quint16 senderPort,const
     QByteArray data;
     QDataStream out(&data, QIODevice::WriteOnly);
     out << message;
-    qDebug() <<"NetSocket::sendMessage to neighbor:" << sender << ":" << senderPort;
-    qDebug() << "NetSocket::Massage content:" << message;
+    //qDebug() <<"NetSocket::sendMessage to neighbor:" << sender << ":" << senderPort;
+    //qDebug() << "NetSocket::Massage content:" << message;
     writeDatagram(data,sender, senderPort);
     return;
 }

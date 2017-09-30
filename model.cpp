@@ -72,8 +72,10 @@ void Model::setPrivateChattingPeer(const QString & pcp)
 
 void Model::updateRoutingTable(const QString &originID, const QHostAddress &senderIP, quint16 senderPort)
 {
+    if (originID == identity || routingTable[originID].second >= senderPort) return;
     routingTable[originID].first = senderIP;
     routingTable[originID].second = senderPort;
+    qDebug() << "Update routingTable:" << routingTable;
 }
 
 bool Model::isValidNewComer(const QString& DNS, const QHostAddress& IP, const quint16& Port){
@@ -91,7 +93,7 @@ Peer* Model::addNeighbor(const QString& DNS, const QHostAddress& IP, const quint
     Peer* peer = new Peer(DNS, IP, Port, this);
     neighbors.push_back(peer);
     emit displayNewNeighbor(DNS, IP, Port);
-    qDebug() << "Model::displayNewNeighbor()";
+    //qDebug() << "Model::displayNewNeighbor()";
     return peer;
 }
 
@@ -110,13 +112,13 @@ void Model::addMyMessage(const QString& content){
     mySeqNo++;
     statusList[identity] = mySeqNo;
     messageList[identity][mySeqNo] = content;
-    qDebug() << "update list:" << statusList << messageList;
+    //qDebug() << "update list:" << statusList << messageList;
 }
 
 void Model::receiveNewMessage(const QString& content, const QString& originID) {
     statusList[originID] = statusList[originID].toInt() + 1;
     messageList[originID][statusList[originID].toInt()] = content;
-    qDebug() << "update list:" << statusList << messageList;
+    //qDebug() << "update list:" << statusList << messageList;
 }
 
 void Model::creatLocalNeighbors(){
