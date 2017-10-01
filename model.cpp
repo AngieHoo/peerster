@@ -44,6 +44,11 @@ const QHash<QString, QPair<QHostAddress, quint16> >& Model::getRoutingTable() co
     return routingTable;
 }
 
+ const int Model::getHighestSeq(const QString& originID) const {
+     if (originID == identity) return mySeqNo;
+     return statusList[originID].toInt();
+
+ }
 quint16 Model::getMyPortMin() const{
     return myPortMin;
 }
@@ -65,6 +70,7 @@ void Model::setMyPortMax(quint16 p){
     myPortMax = p;
 }
 
+
 void Model::setPrivateChattingPeer(const QString & pcp)
 {
     privateChatDestID = pcp;
@@ -72,13 +78,18 @@ void Model::setPrivateChattingPeer(const QString & pcp)
 
 void Model::updateRoutingTable(const QString &originID, const QHostAddress &senderIP, quint16 senderPort)
 {
-    if (originID == identity || routingTable[originID].second >= senderPort) return;
+    if (originID == identity || routingTable[originID].first == senderIP && routingTable[originID].second == senderPort) return;
     routingTable[originID].first = senderIP;
     routingTable[originID].second = senderPort;
     qDebug() << "Update routingTable:" << routingTable;
 }
 
-bool Model::isValidNewComer(const QString& DNS, const QHostAddress& IP, const quint16& Port){
+bool Model::isValidNewRoutingID(const QString& originID) {
+    if (routingTable.count(originID) || originID == identity) return false;
+    return true;
+}
+
+bool Model::isValidNewComer(const QString& DNS, const QHostAddress& IP, const quint16& Port) {
     QHostAddress self(QHostAddress::LocalHost);
     if (IP.toIPv4Address() == self.toIPv4Address() && Port == myPort) {
         QMessageBox::about(NULL, "Warning", "Please don't add yourself!");
@@ -115,9 +126,10 @@ void Model::addMyMessage(const QString& content){
     //qDebug() << "update list:" << statusList << messageList;
 }
 
-void Model::receiveNewMessage(const QString& content, const QString& originID) {
+void Model::addNewMessage(const QString& originID, const QHostAddress& IP, const quint16& port, const QString& content) {
     statusList[originID] = statusList[originID].toInt() + 1;
     messageList[originID][statusList[originID].toInt()] = content;
+    updateRoutingTable(originID, IP, port);
     //qDebug() << "update list:" << statusList << messageList;
 }
 

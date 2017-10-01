@@ -9,6 +9,9 @@
 #include <QTime>
 
 #include "peer.h"
+#include "lib.h"
+
+using namespace peerster;
 
 class Model : public QObject
 {
@@ -24,17 +27,20 @@ public:
     const QVariantMap& getStatusList() const;
     const QHash<QString, QPair<QHostAddress,quint16>>&  getRoutingTable() const;
     const QMap<QString,QMap<quint32, QString>>& getMessagelist() const;
+    const int getHighestSeq(const QString& originID) const;
     const QString getPrivateChattingPeer() const;
     void setMyPort(quint16);
     void setMyPortMin(quint16);
     void setMyPortMax(quint16);
     void setPrivateChattingPeer(const QString&);
+
     void updateRoutingTable(const QString& originID, const QHostAddress& senderIP, quint16 senderPort);
     Peer* addNeighbor(const QString&, const QHostAddress&, const quint16&);
     Peer* getNeighbor(const QHostAddress& IP, const quint16& Port);
+    bool isValidNewRoutingID(const QString& originID);
     bool isValidNewComer(const QString&, const QHostAddress&, const quint16&);
-    void addMyMessage(const QString&);
-    void receiveNewMessage(const QString&, const QString&);
+    void addMyMessage(const QString& content = "");
+    void addNewMessage(const QString& originID, const QHostAddress& IP, const quint16& port,const QString& content = "") ;
     void creatLocalNeighbors();
 
 signals:

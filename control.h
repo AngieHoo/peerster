@@ -8,6 +8,9 @@
 
 #include "model.h"
 #include "netsocket.h"
+#include "lib.h"
+
+using namespace peerster;
 
 class Control : public QObject
 {
@@ -29,7 +32,7 @@ public slots:
 private slots:
      void lookedUp(const QHostInfo &host);
      void doAntiEntropy();
-     void sendRouteMessage();
+     void generateRouteMessage();
 
 signals:
     void displayNewNeighbor(const QString&, const QHostAddress&, const quint16&); // check
@@ -56,10 +59,10 @@ private:
 
      void flipCoins();
 
-     void processStatusMessage(const QVariantMap &myStatuslist, const QVariantMap &message, const QHostAddress& IP, const quint16& port);
-     void processGroupChatMessage(const QVariantMap &myStatuslist, const QVariantMap &message, const QHostAddress& IP, const quint16& port);
-     void processPrivateMessage(const QVariantMap &myStatuslist, const QVariantMap &message, const QHostAddress& IP, const quint16& port);
-     void processRouteMessage(const QVariantMap &myStatuslist, const QVariantMap &message, const QHostAddress& IP, const quint16& port);
+     void processStatusMessage(const QVariantMap &message, const QHostAddress& IP, const quint16& port);
+     void processRumorMessage(const QVariantMap &message, const QHostAddress& IP, const quint16& port, messageType type);
+     void processPrivateMessage(const QVariantMap &message, const QHostAddress& IP, const quint16& port);
+     void processRouteMessage(const QVariantMap &message, const QHostAddress& IP, const quint16& port);
 
 };
 
