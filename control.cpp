@@ -129,10 +129,12 @@ void Control::generateRouteMessage()
     brocastMessage(routeMessage);
 }
 
+//brocast rumor messsage include chat message and route message.
 void Control::brocastMessage(const QVariantMap& message) {
     //qDebug() << "brocast message";
     Peer* randomPeer = model->getPeerRandomly();
     //qDebug() << "pick peer:" << randomPeer->getIP() << randomPeer->getPort();
+    qDebug() << "brocast rumor message to" << peer->getIP();
     sendMsg2Peer(randomPeer, message);
     return;
 }
@@ -275,6 +277,7 @@ void Control::flipCoins(){
 
 void Control::doAntiEntropy(){
     Peer* peer = model->getPeerRandomly();
+    qDebug() << "send antientropy to" << peer->getIP();
     sendMyStatusList(peer->getIP(), peer->getPort());
 }
 
