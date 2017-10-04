@@ -66,7 +66,7 @@ void Control::checkInputNeighbor(const QString& address,const quint16& port){
     else {
         QEventLoop eventloop;
         connect(this, SIGNAL(finishLookUp()), &eventloop,SLOT(quit()));
-        //int id = QHostInfo::lookupHost(address, this, SLOT(lookedUp(QHostInfo)));
+        QHostInfo::lookupHost(address, this, SLOT(lookedUp(QHostInfo)));
         eventloop.exec();
         if (hostInfo.addresses().size() > 0) {
             qDebug()  << hostInfo.addresses().at(0)  << ", Port: " << port;
@@ -79,6 +79,18 @@ void Control::checkInputNeighbor(const QString& address,const quint16& port){
             QMessageBox::about(NULL, "Warning", "Invalid Address!");
         }
     }
+}
+
+void Control::lookedUp(const QHostInfo &host)
+{
+    hostInfo = host;
+    if (host.error() != QHostInfo::NoError) {
+        qDebug() << "Lookup failed:" << host.errorString();
+        emit finishLookUp();
+        return;
+    }
+    hostInfo = host;
+    emit finishLookUp();
 }
 
 void Control::sendMyMessage(const QString& content) {
@@ -260,17 +272,6 @@ void Control::flipCoins(){
     sendMyStatusList(peer->getIP(), peer->getPort());
 }
 
-void Control::lookedUp(const QHostInfo &host)
-{
-    hostInfo = host;
-    if (host.error() != QHostInfo::NoError) {
-        qDebug() << "Lookup failed:" << host.errorString();
-        emit finishLookUp();
-        return;
-    }
-    hostInfo = host;
-    emit finishLookUp();
-}
 
 void Control::doAntiEntropy(){
     Peer* peer = model->getPeerRandomly();
