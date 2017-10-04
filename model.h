@@ -38,7 +38,7 @@ public:
     Peer* addNeighbor(const QString&, const QHostAddress&, const quint16&);
     Peer* getNeighbor(const QHostAddress& IP, const quint16& Port);
     bool isValidNewRoutingID(const QString& originID);
-    bool isValidNewComer(const QString&, const QHostAddress&, const quint16&);
+    bool isValidNewComer(const QHostAddress&, const quint16&);
     void addMyMessage(const QString& content = "");
     void addNewMessage(const QString& originID, const QHostAddress& IP, const quint16& port,const QString& content = "") ;
     void creatLocalNeighbors();

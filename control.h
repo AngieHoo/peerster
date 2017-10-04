@@ -38,7 +38,7 @@ signals:
     void displayNewNeighbor(const QString&, const QHostAddress&, const quint16&); // check
     void displayNewMessage(const QString&);//check
     void finishLookUp();
-    void comeNewOriginID(const QString&);
+    void addNewRouitngnID(const QString&);
 
 private:
      Model* model;

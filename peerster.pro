@@ -12,7 +12,8 @@ QT += widgets
 # Input
 HEADERS += chatdialog.h netsocket.h peer.h textinput.h \
     control.h \
-    model.h
+    model.h \
+    lib.h
 SOURCES += chatdialog.cpp main.cc netsocket.cpp peer.cpp textinput.cpp \
     control.cpp \
     model.cpp

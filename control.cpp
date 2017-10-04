@@ -47,7 +47,7 @@ void Control::bind(){
 }
 
 void Control::checkInputNeighbor(const QString& address,const quint16& port){
-    QHostAddress self(QHostAddress::LocalHost);
+    //QHostAddress self(QHostAddress::LocalHost);
     qDebug() << "Input Neighbor's Address: " ;
     QHostAddress testIP;
     if (testIP.setAddress(address)){ // is a IP address.
@@ -57,7 +57,7 @@ void Control::checkInputNeighbor(const QString& address,const quint16& port){
         }
         else {
             qDebug()  << address << ", Port: " << port;
-            if (model->isValidNewComer(host.hostName(), testIP, port)) {
+            if (model->isValidNewComer(testIP, port)) {
                 Peer* peer = model->addNeighbor(host.hostName(), testIP, port);
                 connect(peer, SIGNAL(timerOut(const Peer*)),this, SLOT(processNoReply(const Peer*)));
             }
@@ -66,11 +66,11 @@ void Control::checkInputNeighbor(const QString& address,const quint16& port){
     else {
         QEventLoop eventloop;
         connect(this, SIGNAL(finishLookUp()), &eventloop,SLOT(quit()));
-        int id = QHostInfo::lookupHost(address, this, SLOT(lookedUp(QHostInfo)));
+        //int id = QHostInfo::lookupHost(address, this, SLOT(lookedUp(QHostInfo)));
         eventloop.exec();
         if (hostInfo.addresses().size() > 0) {
             qDebug()  << hostInfo.addresses().at(0)  << ", Port: " << port;
-            if (model->isValidNewComer(hostInfo.hostName(), hostInfo.addresses().at(0), port)) {
+            if (model->isValidNewComer(hostInfo.addresses().at(0), port)) {
                 Peer* peer = model->addNeighbor(hostInfo.hostName(), hostInfo.addresses().at(0), port);
                 connect(peer, SIGNAL(timerOut(const Peer*)),this, SLOT(processNoReply(const Peer*)));
             }
@@ -133,7 +133,6 @@ void Control::sendMyPrivateMessage(const QString &content)
 
 void Control::sendPrivateMessage(const QString &destinationID, const QString &originID, const QString &content, int hop)
 {
-    qDebug() << "Send private message to " << destinationID << "OriginID:" << originID << "content: " << content << "hotLimit" << hop;
     QVariantMap message;
     message[DEST] = destinationID;
     message[ORIGIN] = originID;
@@ -141,6 +140,8 @@ void Control::sendPrivateMessage(const QString &destinationID, const QString &or
     message[HOP_LIMIT] = hop;
     QHostAddress IP = model->getRoutingTable()[destinationID].first;
     quint16 port = model->getRoutingTable()[destinationID].second;
+    qDebug() << "Send private message to " << destinationID << "OriginID:" << originID << ", IP:" << IP << " ,Port:" << port<<  ", content: " << content << "hotLimit" << hop;
+
     sock->sendMessage(IP, port, message);
 }
 
@@ -185,12 +186,14 @@ void Control::processRumorMessage(const QVariantMap &message, const QHostAddress
 
     qDebug() << "Reveive a [Romor messasge] :" << "OriginID:" << originID << ", SeqNo:" << SeqNo << "content" << content;
     QVariantMap myStatuslist = model->getStatusList();
-    if (myStatuslist[originID].toInt() < SeqNo) {
-        if (model->isValidNewRoutingID(originID)) // new orignID
-            emit comeNewOriginID(originID);
+    if (myStatuslist[originID].toInt() < SeqNo) { 
+        if (model->isValidNewRoutingID(originID)) {// if the originID is a new one, update the routing table.
+            emit addNewRouitngnID(originID);
+            model->updateRoutingTable(originID, IP, port);
+        }
         if (myStatuslist[originID].toInt() + 1 == SeqNo) {
             qDebug() << "right seq";
-            model->addNewMessage(originID, IP, port, content);
+            model->addNewMessage(originID, IP, port, content); // update message list and status list
             if (type == CHAT_MESSAGE) {
                 qDebug() << "It's a chat message: " << content;
                 emit displayNewMessage(originID + ":" + content);
@@ -298,7 +301,7 @@ void Control::processTheDatagram(const QByteArray& datagram, const QHostAddress&
 
     //check if it's a new comer
 
-    if (model->isValidNewComer(host.hostName(), IP, port)) {
+    if (model->isValidNewComer(IP, port)) {
         Peer* peer = model->addNeighbor(host.hostName(), IP, port);
         connect(peer, SIGNAL(timerOut(const Peer*)),this, SLOT(processNoReply(const Peer*)));
     }

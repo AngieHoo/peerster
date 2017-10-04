@@ -70,7 +70,6 @@ void Model::setMyPortMax(quint16 p){
     myPortMax = p;
 }
 
-
 void Model::setPrivateChattingPeer(const QString & pcp)
 {
     privateChatDestID = pcp;
@@ -85,11 +84,12 @@ void Model::updateRoutingTable(const QString &originID, const QHostAddress &send
 }
 
 bool Model::isValidNewRoutingID(const QString& originID) {
-    if (routingTable.count(originID) || originID == identity) return false;
+    qDebug() << "routing table:" << routingTable;
+    if (routingTable.contains(originID) || originID == identity) return false;
     return true;
 }
 
-bool Model::isValidNewComer(const QString& DNS, const QHostAddress& IP, const quint16& Port) {
+bool Model::isValidNewComer(const QHostAddress& IP, const quint16& Port) {
     QHostAddress self(QHostAddress::LocalHost);
     if (IP.toIPv4Address() == self.toIPv4Address() && Port == myPort) {
         QMessageBox::about(NULL, "Warning", "Please don't add yourself!");
@@ -129,7 +129,6 @@ void Model::addMyMessage(const QString& content){
 void Model::addNewMessage(const QString& originID, const QHostAddress& IP, const quint16& port, const QString& content) {
     statusList[originID] = statusList[originID].toInt() + 1;
     messageList[originID][statusList[originID].toInt()] = content;
-    updateRoutingTable(originID, IP, port);
     //qDebug() << "update list:" << statusList << messageList;
 }
 

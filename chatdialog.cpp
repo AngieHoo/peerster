@@ -59,7 +59,7 @@ ChatDialog::ChatDialog()
     control = new Control(this);
     connect(control, SIGNAL(displayNewNeighbor(const QString&,const QHostAddress&,const quint16&)), this, SLOT(displayNewNeighbor(const QString&,const QHostAddress&,const quint16&)));
     connect(control, SIGNAL(displayNewMessage(QString)), this, SLOT(displayNewMessage(QString)));
-    connect(control, SIGNAL(comeNewOriginID(QString)), this, SLOT(addChatPeer(QString)));
+    connect(control, SIGNAL(addNewRouitngnID(QString)), this, SLOT(addChatPeer(QString)));
 
 
     //connect(this, )
