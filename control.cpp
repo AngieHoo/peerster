@@ -134,7 +134,7 @@ void Control::brocastMessage(const QVariantMap& message) {
     //qDebug() << "brocast message";
     Peer* randomPeer = model->getPeerRandomly();
     //qDebug() << "pick peer:" << randomPeer->getIP() << randomPeer->getPort();
-    qDebug() << "brocast rumor message to" << peer->getIP();
+    qDebug() << "brocast rumor message to" << randomPeer->getIP();
     sendMsg2Peer(randomPeer, message);
     return;
 }
@@ -205,7 +205,7 @@ void Control::processRumorMessage(const QVariantMap &message, const QHostAddress
             emit addNewRouitngnID(originID);
             model->updateRoutingTable(originID, IP, port);
         }
-        if (mmodel->getHighestSeq(originID) + 1 == SeqNo) {
+        if (model->getHighestSeq(originID) + 1 == SeqNo) {
             qDebug() << "right seq";
             model->addNewMessage(originID, IP, port, content); // update message list and status list
             if (type == CHAT_MESSAGE) {
