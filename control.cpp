@@ -15,7 +15,7 @@ Control::Control(QObject *parent) : QObject(parent)
     timerRoute->setInterval(60000);
 
     connect(timer, SIGNAL(timeout()), this, SLOT(doAntiEntropy()));
-    connect(timer, SIGNAL(timeout()), this, SLOT(generateRouteMessage()));
+    connect(timerRoute, SIGNAL(timeout()), this, SLOT(generateRouteMessage()));
 
 }
 
@@ -198,14 +198,14 @@ void Control::processRumorMessage(const QVariantMap &message, const QHostAddress
     quint32 SeqNo = message[SEQ_NO].toInt();
     QString content = message[CHAT_TEXT].toString();
 
-    qDebug() << "Reveive a [Romor messasge] :" << "OriginID:" << originID << ", SeqNo:" << SeqNo << "content" << content;
-    QVariantMap myStatuslist = model->getStatusList();
-    if (myStatuslist[originID].toInt() < SeqNo) { 
+    qDebug() << "Reveive a [Romor messasge] from" << IP << ", OriginID:" << originID << ", SeqNo:" << SeqNo << "content" << content;
+    //QVariantMap myStatuslist = model->getStatusList();
+    if (model->getHighestSeq(originID) < SeqNo) {
         if (model->isValidNewRoutingID(originID)) {// if the originID is a new one, update the routing table.
             emit addNewRouitngnID(originID);
             model->updateRoutingTable(originID, IP, port);
         }
-        if (myStatuslist[originID].toInt() + 1 == SeqNo) {
+        if (mmodel->getHighestSeq(originID) + 1 == SeqNo) {
             qDebug() << "right seq";
             model->addNewMessage(originID, IP, port, content); // update message list and status list
             if (type == CHAT_MESSAGE) {
@@ -216,6 +216,7 @@ void Control::processRumorMessage(const QVariantMap &message, const QHostAddress
         }
         brocastMessage(message); // send message to a random neighbor.
     }
+    qDebug() << "reply my status" << model->getStatusList();
     sendMyStatusList(IP, port);// reply my statuslist;
 }
 
