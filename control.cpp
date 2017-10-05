@@ -22,7 +22,7 @@ Control::Control(QObject *parent) : QObject(parent)
 
 void Control::start(){
      bind();
-     model->creatLocalNeighbors();
+     //model->creatLocalNeighbors();
      timer->start();
      timerRoute->start();
 
@@ -30,6 +30,7 @@ void Control::start(){
      int i = 1;
      while (i < commond.size()) {
          if (commond[i] == "noforward") {
+             qDebug() << "set forward: false!";
              forward = false;
          }
          else
@@ -144,7 +145,7 @@ void Control::brocastMessage(const QVariantMap& message) {
     //qDebug() << "brocast message";
     Peer* randomPeer = model->getPeerRandomly();
     //qDebug() << "pick peer:" << randomPeer->getIP() << randomPeer->getPort();
-    qDebug() << "brocast rumor message to" << randomPeer->getIP();
+    qDebug() << "brocast rumor message to" << randomPeer->getIP() << ":" << randomPeer->getPort();
     sendMsg2Peer(randomPeer, message);
     return;
 }
