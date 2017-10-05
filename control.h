@@ -46,6 +46,7 @@ private:
      QTimer* timer;
      QTimer* timerRoute;
      QHostInfo hostInfo;
+     bool forward;
 
 
      void bind();

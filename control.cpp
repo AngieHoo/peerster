@@ -2,6 +2,7 @@
 
 Control::Control(QObject *parent) : QObject(parent)
 {
+    forward = true;
     sock = new NetSocket(this);
     connect(sock, SIGNAL(processTheDatagram(QByteArray,QHostAddress,quint16)), SLOT(processTheDatagram(QByteArray,QHostAddress,quint16)));
 
@@ -26,12 +27,21 @@ void Control::start(){
      timerRoute->start();
 
      QStringList commond = QCoreApplication::arguments();
-     if (commond.size() > 1 && commond[1] != ""){
-         QString originNeighbor = commond[1];
-         QString address = originNeighbor.left(originNeighbor.indexOf(':'));
-         quint16 port = originNeighbor.mid(originNeighbor.indexOf(':') + 1).toInt();
-         checkInputNeighbor(address, port);
+     int i = 1;
+     while (i < commond.size()) {
+         if (commond[i] == "noforward") {
+             forward = false;
+         }
+         else
+         {
+             QString originNeighbor = commond[i];
+             QString address = originNeighbor.left(originNeighbor.indexOf(':'));
+             quint16 port = originNeighbor.mid(originNeighbor.indexOf(':') + 1).toInt();
+             checkInputNeighbor(address, port);
+         }
+         i++;
      }
+
      generateRouteMessage();
 }
 
@@ -170,15 +180,18 @@ void Control::processStatusMessage(const QVariantMap &message, const QHostAddres
     QVariantMap myStatuslist = model->getStatusList();
     QVariantMap senerStatusList = message[WANT].toMap();
     bool flagNew = false; // flag if i have some newer status to send to the IP.
-    for (QVariantMap::const_iterator it = myStatuslist.begin(); it != myStatuslist.end(); it++) {
-        int seq = senerStatusList[it.key()].toInt() == 0 ? 1 : senerStatusList[it.key()].toInt();
-        if (seq <= it.value().toInt()) {
-            flagNew = true;
-            sendOriginMessage(IP, port, model->getMessagelist()[it.key()][seq], it.key(), seq);
-            qDebug() << "my status" << myStatuslist;
-            //qDebug() << "I send him my new message. sender seq: " << seq << "my status:" << it.value().toInt();
+    if (forward) {
+        for (QVariantMap::const_iterator it = myStatuslist.begin(); it != myStatuslist.end(); it++) {
+            int seq = senerStatusList[it.key()].toInt() == 0 ? 1 : senerStatusList[it.key()].toInt();
+            if (seq <= it.value().toInt()) {
+                flagNew = true;
+                sendOriginMessage(IP, port, model->getMessagelist()[it.key()][seq], it.key(), seq);
+                qDebug() << "my status" << myStatuslist;
+                //qDebug() << "I send him my new message. sender seq: " << seq << "my status:" << it.value().toInt();
+            }
         }
     }
+
     if (flagNew) return;
     else{ // if I have nothing new for the IP, then check if the IP contains new message that i have not received
         for (QVariantMap::iterator it = senerStatusList.begin(); it != senerStatusList.end(); it++) {
@@ -212,9 +225,9 @@ void Control::processRumorMessage(const QVariantMap &message, const QHostAddress
                 qDebug() << "It's a chat message: " << content;
                 emit displayNewMessage(originID + ":" + content);
             }
-
         }
-        brocastMessage(message); // send message to a random neighbor.
+        if (type == ROUT_MESSAGE || forward)
+            brocastMessage(message); // send message to a random neighbor.
     }
     qDebug() << "reply my status" << model->getStatusList();
     sendMyStatusList(IP, port);// reply my statuslist;
@@ -241,6 +254,7 @@ void Control::processPrivateMessage(const QVariantMap &message, const QHostAddre
 
     hopLimit--;
 
+    if (!forward) return;
     qDebug() << "forward message to" << model->getRoutingTable()[destID];
     sendPrivateMessage(destID, originID, content, hopLimit);
 
