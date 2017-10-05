@@ -93,7 +93,7 @@ bool Model::isValidNewRoutingID(const QString& originID) {
 bool Model::isValidNewComer(const QHostAddress& IP, const quint16& Port) {
     QHostAddress self(QHostAddress::LocalHost);
     if (IP.toIPv4Address() == self.toIPv4Address() && Port == myPort) {
-        QMessageBox::about(NULL, "Warning", "Please don't add yourself!");
+        //QMessageBox::about(NULL, "Warning", "Please don't add yourself!");
         return false;
     }
     if (getNeighbor(IP, Port) != NULL) return false;

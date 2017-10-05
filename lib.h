@@ -9,12 +9,14 @@ const QString CHAT_TEXT= "ChatText";
 const QString HOP_LIMIT = "HopLimit";
 const QString SEQ_NO = "SeqNo";
 const QString WANT = "Want";
+const QString LAST_IP = "LastIP";
+const QString LAST_PORT = "LastPort";
 
 enum messageType {
     CHAT_MESSAGE,
     ROUT_MESSAGE,
     STATUS_MESSAGE
-} ;
+};
 
 
 }

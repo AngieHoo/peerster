@@ -61,9 +61,11 @@ private:
      void flipCoins();
 
      void processStatusMessage(const QVariantMap &message, const QHostAddress& IP, const quint16& port);
-     void processRumorMessage(const QVariantMap &message, const QHostAddress& IP, const quint16& port, messageType type);
+     void processRumorMessage(const QString& DNS, QVariantMap &message, const QHostAddress& IP, const quint16& port, messageType type);
      void processPrivateMessage(const QVariantMap &message, const QHostAddress& IP, const quint16& port);
      void processRouteMessage(const QVariantMap &message, const QHostAddress& IP, const quint16& port);
+
+     void addNewNeighbor(const QString& DNS, const QHostAddress& IP, const quint16& port);
 
 };
 

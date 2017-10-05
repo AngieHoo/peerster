@@ -207,11 +207,18 @@ void Control::processStatusMessage(const QVariantMap &message, const QHostAddres
     }
 }
 
-void Control::processRumorMessage(const QVariantMap &message, const QHostAddress& IP, const quint16& port, messageType type)
+void Control::processRumorMessage(const QString& DNS,  QVariantMap &message, const QHostAddress& IP, const quint16& port, messageType type)
 {
     QString originID = message[ORIGIN].toString();
     quint32 SeqNo = message[SEQ_NO].toInt();
     QString content = message[CHAT_TEXT].toString();
+
+    if (message.contains(LAST_IP) && message.contains(LAST_PORT)) {
+        addNewNeighbor(DNS, QHostAddress(message[LAST_IP].toInt()), message[LAST_PORT].toInt());
+    }
+
+    message[LAST_IP] = IP.toIPv4Address();
+    message[LAST_PORT] = port;
 
     qDebug() << "Reveive a [Romor messasge] from" << IP << ", OriginID:" << originID << ", SeqNo:" << SeqNo << "content" << content;
     //QVariantMap myStatuslist = model->getStatusList();
@@ -262,6 +269,51 @@ void Control::processPrivateMessage(const QVariantMap &message, const QHostAddre
 
 }
 
+void Control::addNewNeighbor(const QString& DNS, const QHostAddress &IP, const quint16 &port)
+{
+    if (model->isValidNewComer(IP, port)) {
+        Peer* peer = model->addNeighbor(DNS, IP, port);
+        connect(peer, SIGNAL(timerOut(const Peer*)),this, SLOT(processNoReply(const Peer*)));
+    }
+}
+
+void Control::processTheDatagram(const QByteArray& datagram, const QHostAddress& IP, const quint16& port) {
+    //qDebug() << "receive message from sender: " << IP.toString() << ", port:" << port;
+
+    QHostInfo host = QHostInfo::fromName(IP.toString());
+    if (host.error() != QHostInfo::NoError) {
+        qDebug() << "Lookup failed:" << host.errorString();
+        return;
+    }
+    //qDebug() << "sender's DNS" << host.hostName();
+
+    //check if it's a new comer
+    addNewNeighbor(host.hostName(), IP, port);
+
+    QDataStream in(datagram);
+    QVariantMap message;
+    in >> message;
+
+    if (message.contains(WANT)) {// a status message
+       processStatusMessage(message, IP, port);
+    }
+    else if (message.contains(CHAT_TEXT) && message.contains(ORIGIN)
+             && message.contains(SEQ_NO)) { // brocast message to a random neighbor
+       processRumorMessage(host.hostName(),message, IP, port, CHAT_MESSAGE);
+    }
+    else if (message.contains(ORIGIN) && message.contains(SEQ_NO)) {
+        processRumorMessage(host.hostName(),message, IP, port, ROUT_MESSAGE);
+    }
+    else if (message.contains(DEST) && message.contains(ORIGIN)
+             && message.contains(CHAT_TEXT) && message.contains(HOP_LIMIT)) {
+        processPrivateMessage(message, IP, port);
+    }
+    else {
+        qDebug() << message.begin().key();
+        qDebug() << "information dammaged!";
+    }
+    return;
+}
 
 void Control::sendMsg2Peer(Peer* peer, const QVariantMap& message) {
     sock->sendMessage(peer->getIP(), peer->getPort(), message);
@@ -314,47 +366,6 @@ void Control::addPrivateChatPeer(const QString & p)
     model->setPrivateChattingPeer(p);
 }
 
-void Control::processTheDatagram(const QByteArray& datagram, const QHostAddress& IP, const quint16& port) {
-    //qDebug() << "receive message from sender: " << IP.toString() << ", port:" << port;
-
-    QHostInfo host = QHostInfo::fromName(IP.toString());
-    if (host.error() != QHostInfo::NoError) {
-        qDebug() << "Lookup failed:" << host.errorString();
-        return;
-    }
-    //qDebug() << "sender's DNS" << host.hostName();
-
-    //check if it's a new comer
-
-    if (model->isValidNewComer(IP, port)) {
-        Peer* peer = model->addNeighbor(host.hostName(), IP, port);
-        connect(peer, SIGNAL(timerOut(const Peer*)),this, SLOT(processNoReply(const Peer*)));
-    }
-
-    QDataStream in(datagram);
-    QVariantMap message;
-    in >> message;
-
-    if (message.contains(WANT)) {// a status message
-       processStatusMessage(message, IP, port);
-    }
-    else if (message.contains(CHAT_TEXT) && message.contains(ORIGIN)
-             && message.contains(SEQ_NO)) { // brocast message to a random neighbor
-       processRumorMessage(message, IP, port, CHAT_MESSAGE);
-    }
-    else if (message.contains(ORIGIN) && message.contains(SEQ_NO)) {
-        processRumorMessage(message, IP, port, ROUT_MESSAGE);
-    }
-    else if (message.contains(DEST) && message.contains(ORIGIN)
-             && message.contains(CHAT_TEXT) && message.contains(HOP_LIMIT)) {
-        processPrivateMessage(message, IP, port);
-    }
-    else {
-        qDebug() << message.begin().key();
-        qDebug() << "information dammaged!";
-    }
-    return;
-}
 
 QString Control::getIdentity(){
     return model->getIdentity();
