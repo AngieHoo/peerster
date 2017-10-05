@@ -144,6 +144,7 @@ void Control::generateRouteMessage()
 void Control::brocastMessage(const QVariantMap& message) {
     //qDebug() << "brocast message";
     Peer* randomPeer = model->getPeerRandomly();
+    if (!randomPeer) return;
     //qDebug() << "pick peer:" << randomPeer->getIP() << randomPeer->getPort();
     qDebug() << "brocast rumor message to" << randomPeer->getIP() << ":" << randomPeer->getPort();
     sendMsg2Peer(randomPeer, message);
@@ -287,21 +288,25 @@ void Control::flipCoins(){
     if (flag) return;
     qDebug() << "flip coins!!!";
     Peer* peer = model->getPeerRandomly();
-    sendMyStatusList(peer->getIP(), peer->getPort());
+    if (peer)
+        sendMyStatusList(peer->getIP(), peer->getPort());
 }
 
 
 void Control::doAntiEntropy(){
     Peer* peer = model->getPeerRandomly();
-    qDebug() << "send antientropy to" << peer->getIP();
-    sendMyStatusList(peer->getIP(), peer->getPort());
+    if (peer) {
+        qDebug() << "send antientropy to" << peer->getIP();
+        sendMyStatusList(peer->getIP(), peer->getPort());
+    }
 }
 
 
 void Control::processNoReply(const Peer* peer){
     QVariantMap message = peer->getMessage();
     Peer* p = model->getPeerRandomly();
-    sendMsg2Peer(p, message);
+    if (peer)
+        sendMsg2Peer(p, message);
 }
 
 void Control::addPrivateChatPeer(const QString & p)

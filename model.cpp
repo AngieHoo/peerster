@@ -25,6 +25,7 @@ const QString Model::getPrivateChattingPeer() const
     return privateChatDestID;
 }
 Peer* Model::getPeerRandomly() const{
+    if (!neighbors.size()) return NULL;
     QTime t= QTime::currentTime();
     qsrand(t.msec()+t.second()*1000);
     int pickNo = qrand() % neighbors.size();
