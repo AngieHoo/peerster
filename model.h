@@ -27,6 +27,7 @@ public:
     const QVariantMap& getStatusList() const;
     const QHash<QString, QPair<QHostAddress,quint16>>&  getRoutingTable() const;
     const QMap<QString,QMap<quint32, QString>>& getMessagelist() const;
+    const QVector<Peer*> getNeighbors() const;
     const int getHighestSeq(const QString& originID) const;
     const QString getPrivateChattingPeer() const;
     void setMyPort(quint16);

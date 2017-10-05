@@ -111,7 +111,7 @@ void Control::sendMyMessage(const QString& content) {
     message[ORIGIN] = model->getIdentity();
     message[SEQ_NO] = model->getMySeqNo();
     qDebug() << "send my message" << message;
-    brocastMessage(message);
+    forwardMessageRandomly(message);
     return;
 }
 
@@ -137,18 +137,26 @@ void Control::generateRouteMessage()
     routeMessage[ORIGIN] = model->getIdentity();
     routeMessage[SEQ_NO] = model->getMySeqNo();
     qDebug() << "send routing message: " << routeMessage;
-    brocastMessage(routeMessage);
+    forwardMessageRandomly(routeMessage);
 }
 
 //brocast rumor messsage include chat message and route message.
-void Control::brocastMessage(const QVariantMap& message) {
+void Control::forwardMessageRandomly(const QVariantMap& message) {
     //qDebug() << "brocast message";
     Peer* randomPeer = model->getPeerRandomly();
     if (!randomPeer) return;
     //qDebug() << "pick peer:" << randomPeer->getIP() << randomPeer->getPort();
     qDebug() << "brocast rumor message to" << randomPeer->getIP() << ":" << randomPeer->getPort();
     sendMsg2Peer(randomPeer, message);
-    return;
+}
+
+void Control::forwardMessage2All(const QVariantMap &message)
+{
+    QVector<Peer*> neighbors = model->getNeighbors();
+    for (auto &n : neighbors) {
+        sendMsg2Peer(n, message);
+    }
+
 }
 
 void Control::sendMyPrivateMessage(const QString &content)
@@ -213,8 +221,10 @@ void Control::processRumorMessage(const QString& DNS,  QVariantMap &message, con
     quint32 SeqNo = message[SEQ_NO].toInt();
     QString content = message[CHAT_TEXT].toString();
 
+    bool direct = true;
     if (message.contains(LAST_IP) && message.contains(LAST_PORT)) {
         addNewNeighbor(DNS, QHostAddress(message[LAST_IP].toInt()), message[LAST_PORT].toInt());
+        direct = false;
     }
 
     message[LAST_IP] = IP.toIPv4Address();
@@ -224,9 +234,9 @@ void Control::processRumorMessage(const QString& DNS,  QVariantMap &message, con
     //QVariantMap myStatuslist = model->getStatusList();
     if (model->getHighestSeq(originID) < SeqNo) {
         if (model->isValidNewRoutingID(originID)) {// if the originID is a new one, update the routing table.
-            emit addNewRouitngnID(originID);
-            model->updateRoutingTable(originID, IP, port);
+            emit addNewRouitngnID(originID);    
         }
+        model->updateRoutingTable(originID, IP, port);
         if (model->getHighestSeq(originID) + 1 == SeqNo) {
             qDebug() << "right seq";
             model->addNewMessage(originID, IP, port, content); // update message list and status list
@@ -235,15 +245,20 @@ void Control::processRumorMessage(const QString& DNS,  QVariantMap &message, con
                 emit displayNewMessage(originID + ":" + content);
             }
         }
-        if (type == ROUT_MESSAGE || forward)
-            brocastMessage(message); // send message to a random neighbor.
+        if (type == ROUT_MESSAGE)
+            forwardMessage2All(message);
+        else if (type == CHAT_MESSAGE && forward)
+            forwardMessageRandomly(message); // send message to a random neighbor.
+    }
+    else if (model->getHighestSeq(originID) == SeqNo && type == ROUT_MESSAGE && direct) { // replace the indirect with the direct path
+        model->updateRoutingTable(originID, IP, port);
     }
     qDebug() << "reply my status" << model->getStatusList();
     sendMyStatusList(IP, port);// reply my statuslist;
 }
 
 
-void Control::processPrivateMessage(const QVariantMap &message, const QHostAddress& IP, const quint16& port)
+void Control::processPrivateMessage(const QVariantMap &message)
 {
     QString destID = message[DEST].toString();
     QString originID = message[ORIGIN].toString();
@@ -306,7 +321,7 @@ void Control::processTheDatagram(const QByteArray& datagram, const QHostAddress&
     }
     else if (message.contains(DEST) && message.contains(ORIGIN)
              && message.contains(CHAT_TEXT) && message.contains(HOP_LIMIT)) {
-        processPrivateMessage(message, IP, port);
+        processPrivateMessage(message);
     }
     else {
         qDebug() << message.begin().key();

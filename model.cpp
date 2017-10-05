@@ -13,17 +13,25 @@ Model::Model(QObject *parent) : QObject(parent)
    // connect(this, SIGNAL(test()),this, SLOT(respondtest()));
 
 }
+
 const QVariantMap& Model::getStatusList() const{
     return statusList;
 }
+
 const QMap<QString,QMap<quint32, QString>>& Model::getMessagelist() const{
     return messageList;
+}
+
+const QVector<Peer *> Model::getNeighbors() const
+{
+    return neighbors;
 }
 
 const QString Model::getPrivateChattingPeer() const
 {
     return privateChatDestID;
 }
+
 Peer* Model::getPeerRandomly() const{
     if (!neighbors.size()) return NULL;
     QTime t= QTime::currentTime();

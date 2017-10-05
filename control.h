@@ -54,7 +54,9 @@ private:
      void sendMsg2Peer(Peer*, const QVariantMap&); // check
      void sendOriginMessage(const QHostAddress&, const quint16&, const QString&, const QString&,const quint32&);//
      void sendMyStatusList(const QHostAddress& sender, const quint16 senderPort);//    
-     void brocastMessage(const QVariantMap& message);
+     void forwardMessageRandomly(const QVariantMap& message);
+     void forwardMessage2All(const QVariantMap& message);
+
 
      void sendPrivateMessage(const QString& destinationID, const QString &originID, const QString& content, int hop);
 
@@ -62,7 +64,7 @@ private:
 
      void processStatusMessage(const QVariantMap &message, const QHostAddress& IP, const quint16& port);
      void processRumorMessage(const QString& DNS, QVariantMap &message, const QHostAddress& IP, const quint16& port, messageType type);
-     void processPrivateMessage(const QVariantMap &message, const QHostAddress& IP, const quint16& port);
+     void processPrivateMessage(const QVariantMap &message);
      void processRouteMessage(const QVariantMap &message, const QHostAddress& IP, const quint16& port);
 
      void addNewNeighbor(const QString& DNS, const QHostAddress& IP, const quint16& port);
