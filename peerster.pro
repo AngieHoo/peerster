@@ -6,8 +6,9 @@ TEMPLATE = app
 TARGET = peerster
 INCLUDEPATH += .
 DEPENDPATH += .
+QMAKE_CXXFLAGS += -std=c++0x
 QT += network
-QT += widgets
+QT += widgets core gui
 
 # Input
 HEADERS += chatdialog.h netsocket.h peer.h textinput.h \
