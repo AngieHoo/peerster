@@ -212,7 +212,8 @@ void Control::processStatusMessage(const QVariantMap &message, const QHostAddres
             }
         }
         //qDebug() << "same status;";
-        flipCoins(); //we have exactly the same status, I pick up a random neighbor to send my status to it.
+        if (forward)
+            flipCoins(); //we have exactly the same status, I pick up a random neighbor to send my status to it.
     }
 }
 
