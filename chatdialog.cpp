@@ -57,12 +57,9 @@ ChatDialog::ChatDialog()
 
 
     control = new Control(this);
-    connect(control, SIGNAL(displayNewNeighbor(const QString&,const QHostAddress&,const quint16&)), this, SLOT(displayNewNeighbor(const QString&,const QHostAddress&,const quint16&)));
+    connect(control, SIGNAL(displayNewNeighbor(const QHostAddress&,const quint16&)), this, SLOT(displayNewNeighbor(const QHostAddress&,const quint16&)));
     connect(control, SIGNAL(displayNewMessage(QString)), this, SLOT(displayNewMessage(QString)));
     connect(control, SIGNAL(addNewRouitngnID(QString)), this, SLOT(addChatPeer(QString)));
-
-
-    //connect(this, )
 
     control->start();
 }
@@ -72,8 +69,13 @@ ChatDialog::ChatDialog()
 
 //Private slots:
 void ChatDialog::sendMyMessage() {
-    control->sendMyMessage(textinput->toPlainText());
-    textview->append(control->getIdentity() + ":" + textinput->toPlainText());
+    QString content = textinput->toPlainText();
+    if (content.size() == 0) {
+        QMessageBox::about(NULL, "Warning", "Please input something!");
+        return;
+    }
+    control->sendMyMessage(content);
+    textview->append(control->getIdentity() + ":" + content);
     textinput->clear();
     return;
 }
@@ -95,9 +97,9 @@ void ChatDialog::choosePeer(QListWidgetItem *peer)
 }
 
 
-void ChatDialog::displayNewNeighbor(const QString& DNS, const QHostAddress& IP, const quint16& port){
+void ChatDialog::displayNewNeighbor(const QHostAddress& IP, const quint16& port){
     qDebug() << "ChatDialog::displayNewNeighbor";
-    onlineNeighbor->append(DNS + "(" + IP.toString() + ")"+ ":" + QString::number(port));
+    onlineNeighbor->append(IP.toString() + ":" + QString::number(port));
 }
 
 void ChatDialog::displayNewMessage(const QString& content){

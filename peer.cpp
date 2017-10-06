@@ -1,6 +1,6 @@
 #include "peer.h"
 
-Peer::Peer(const QString& DNS, const QHostAddress& IP, const quint16& Port, QObject *parent, const QVariantMap& message)
+Peer::Peer(const QHostAddress& IP, const quint16& Port, QObject *parent, const QString& DNS)
     : QObject(parent), DNS(DNS), IP(IP), Port(Port){
     timer.setSingleShot(true);
     timer.setInterval(2000);

@@ -2,15 +2,19 @@
 
 Model::Model(QObject *parent) : QObject(parent)
 {
+    QHostInfo info=QHostInfo::fromName(QHostInfo::localHostName());
+    myIP = info.addresses().first();
     mySeqNo= 0;
     QTime t = QTime::currentTime();
     qsrand(t.msec()+t.second()*1000);
-    identity = QString::number(qrand());
+    identity = "Angie_" + QString::number(qrand());
 
     myPortMin = 32768 + (getuid() % 4096)*4;
     myPortMax = myPortMin + 3;
     myPort = -1;
-   // connect(this, SIGNAL(test()),this, SLOT(respondtest()));
+    // connect(this, SIGNAL(test()),this, SLOT(respondtest()));
+
+    qDebug() << "initialize: identity: " << identity << ", IP:" << myIP;
 
 }
 
@@ -100,7 +104,7 @@ bool Model::isValidNewRoutingID(const QString& originID) {
 
 bool Model::isValidNewComer(const QHostAddress& IP, const quint16& Port) {
     QHostAddress self(QHostAddress::LocalHost);
-    if (IP.toIPv4Address() == self.toIPv4Address() && Port == myPort) {
+    if ((IP.toIPv4Address() == myIP.toIPv4Address() || self.toIPv4Address() == IP.toIPv4Address())&& Port == myPort) {
         //QMessageBox::about(NULL, "Warning", "Please don't add yourself!");
         return false;
     }
@@ -108,11 +112,11 @@ bool Model::isValidNewComer(const QHostAddress& IP, const quint16& Port) {
     return true;
 }
 
-Peer* Model::addNeighbor(const QString& DNS, const QHostAddress& IP, const quint16& Port){
+Peer* Model::addNeighbor(const QHostAddress& IP, const quint16& Port){
     qDebug() <<  "Add the neighbor: " << IP << ": " << Port;
-    Peer* peer = new Peer(DNS, IP, Port, this);
+    Peer* peer = new Peer(IP, Port, this);
     neighbors.push_back(peer);
-    emit displayNewNeighbor(DNS, IP, Port);
+    emit displayNewNeighbor(IP, Port);
     //qDebug() << "Model::displayNewNeighbor()";
     return peer;
 }
@@ -144,7 +148,7 @@ void Model::addNewMessage(const QString& originID, const QHostAddress& IP, const
 void Model::creatLocalNeighbors(){
     for (quint16 p = myPortMin; p <= myPortMax; p++) {
         if (myPort == p) continue;
-        addNeighbor(QHostInfo::localHostName(), QHostAddress::LocalHost, p);
+        addNeighbor(QHostAddress::LocalHost, p);
     }
 }
 

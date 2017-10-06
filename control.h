@@ -35,7 +35,7 @@ private slots:
      void generateRouteMessage();
 
 signals:
-    void displayNewNeighbor(const QString&, const QHostAddress&, const quint16&); // check
+    void displayNewNeighbor(const QHostAddress&, const quint16&); // check
     void displayNewMessage(const QString&);//check
     void finishLookUp();
     void addNewRouitngnID(const QString&);
@@ -63,11 +63,11 @@ private:
      void flipCoins();
 
      void processStatusMessage(const QVariantMap &message, const QHostAddress& IP, const quint16& port);
-     void processRumorMessage(const QString& DNS, QVariantMap &message, const QHostAddress& IP, const quint16& port, messageType type);
+     void processRumorMessage(QVariantMap &message, const QHostAddress& IP, const quint16& port, messageType type);
      void processPrivateMessage(const QVariantMap &message);
      void processRouteMessage(const QVariantMap &message, const QHostAddress& IP, const quint16& port);
 
-     void addNewNeighbor(const QString& DNS, const QHostAddress& IP, const quint16& port);
+     void addNewNeighbor( const QHostAddress& IP, const quint16& port);
 
 };
 

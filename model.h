@@ -36,7 +36,7 @@ public:
     void setPrivateChattingPeer(const QString&);
 
     void updateRoutingTable(const QString& originID, const QHostAddress& senderIP, quint16 senderPort);
-    Peer* addNeighbor(const QString&, const QHostAddress&, const quint16&);
+    Peer* addNeighbor(const QHostAddress&, const quint16&);
     Peer* getNeighbor(const QHostAddress& IP, const quint16& Port);
     bool isValidNewRoutingID(const QString& originID);
     bool isValidNewComer(const QHostAddress&, const quint16&);
@@ -45,12 +45,13 @@ public:
     void creatLocalNeighbors();
 
 signals:
-    void displayNewNeighbor(const QString&, const QHostAddress&, const quint16&);
+    void displayNewNeighbor(const QHostAddress&, const quint16&);
     //void test();
 
 public slots:
     //void respondtest();
 private:
+    QHostAddress myIP;
     quint16 myPort;
     quint16 myPortMin;
     quint16 myPortMax;

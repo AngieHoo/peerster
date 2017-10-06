@@ -23,7 +23,7 @@ public:
     ChatDialog();
 
 public slots:
-     void displayNewNeighbor(const QString&, const QHostAddress&, const quint16&);
+     void displayNewNeighbor(const QHostAddress&, const quint16&);
      void displayNewMessage(const QString&);
      void addChatPeer(const QString&);
      void sendPrivateMessage();

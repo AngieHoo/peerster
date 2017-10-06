@@ -9,7 +9,7 @@ class Peer : public QObject
 {
     Q_OBJECT
 public:
-    Peer(const QString& DNS, const QHostAddress& IP, const quint16& Port, QObject *parent,const QVariantMap& message = QVariantMap());
+    Peer(const QHostAddress& IP, const quint16& Port, QObject *parent, const QString& DNS = "");
     Peer();
     Peer(const Peer&);
     QString getDNS() const;

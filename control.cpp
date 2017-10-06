@@ -8,7 +8,7 @@ Control::Control(QObject *parent) : QObject(parent)
 
     model = new Model(this);
 
-    connect(model, SIGNAL(displayNewNeighbor(const QString&,const QHostAddress&,const quint16&)), this, SIGNAL(displayNewNeighbor(const QString&,const QHostAddress&,const quint16&)));
+    connect(model, SIGNAL(displayNewNeighbor(const QHostAddress&,const quint16&)), this, SIGNAL(displayNewNeighbor(const QHostAddress&,const quint16&)));
 
     timer = new QTimer(this);
     timer->setInterval(10000);
@@ -69,7 +69,7 @@ void Control::checkInputNeighbor(const QString& address,const quint16& port){
         else {
             qDebug()  << address << ", Port: " << port;
             if (model->isValidNewComer(testIP, port)) {
-                Peer* peer = model->addNeighbor(host.hostName(), testIP, port);
+                Peer* peer = model->addNeighbor(testIP, port);
                 connect(peer, SIGNAL(timerOut(const Peer*)),this, SLOT(processNoReply(const Peer*)));
             }
         }
@@ -82,7 +82,7 @@ void Control::checkInputNeighbor(const QString& address,const quint16& port){
         if (hostInfo.addresses().size() > 0) {
             qDebug()  << hostInfo.addresses().at(0)  << ", Port: " << port;
             if (model->isValidNewComer(hostInfo.addresses().at(0), port)) {
-                Peer* peer = model->addNeighbor(hostInfo.hostName(), hostInfo.addresses().at(0), port);
+                Peer* peer = model->addNeighbor(hostInfo.addresses().at(0), port);
                 connect(peer, SIGNAL(timerOut(const Peer*)),this, SLOT(processNoReply(const Peer*)));
             }
         }
@@ -120,7 +120,7 @@ void Control::sendOriginMessage(const QHostAddress& IP, const quint16& port, con
     QVariantMap newMessage;
     newMessage[ORIGIN] = originID;
     newMessage[SEQ_NO] = seq;
-    if (content.size() > 0){
+    if (content.size() > 0) {
         newMessage[CHAT_TEXT] = content;
         qDebug() << "Control::sendOriginMessage:  I send him a chat message." << newMessage;
     }
@@ -215,7 +215,7 @@ void Control::processStatusMessage(const QVariantMap &message, const QHostAddres
     }
 }
 
-void Control::processRumorMessage(const QString& DNS,  QVariantMap &message, const QHostAddress& IP, const quint16& port, messageType type)
+void Control::processRumorMessage(QVariantMap &message, const QHostAddress& IP, const quint16& port, messageType type)
 {
     QString originID = message[ORIGIN].toString();
     quint32 SeqNo = message[SEQ_NO].toInt();
@@ -223,7 +223,7 @@ void Control::processRumorMessage(const QString& DNS,  QVariantMap &message, con
 
     bool direct = true;
     if (message.contains(LAST_IP) && message.contains(LAST_PORT)) {
-        addNewNeighbor(DNS, QHostAddress(message[LAST_IP].toInt()), message[LAST_PORT].toInt());
+        addNewNeighbor(QHostAddress(message[LAST_IP].toInt()), message[LAST_PORT].toInt());
         direct = false;
     }
 
@@ -234,7 +234,7 @@ void Control::processRumorMessage(const QString& DNS,  QVariantMap &message, con
     //QVariantMap myStatuslist = model->getStatusList();
     if (model->getHighestSeq(originID) < SeqNo) {
         if (model->isValidNewRoutingID(originID)) {// if the originID is a new one, update the routing table.
-            emit addNewRouitngnID(originID);    
+            emit addNewRouitngnID(originID);
         }
         model->updateRoutingTable(originID, IP, port);
         if (model->getHighestSeq(originID) + 1 == SeqNo) {
@@ -284,10 +284,10 @@ void Control::processPrivateMessage(const QVariantMap &message)
 
 }
 
-void Control::addNewNeighbor(const QString& DNS, const QHostAddress &IP, const quint16 &port)
+void Control::addNewNeighbor(const QHostAddress &IP, const quint16 &port)
 {
     if (model->isValidNewComer(IP, port)) {
-        Peer* peer = model->addNeighbor(DNS, IP, port);
+        Peer* peer = model->addNeighbor(IP, port);
         connect(peer, SIGNAL(timerOut(const Peer*)),this, SLOT(processNoReply(const Peer*)));
     }
 }
@@ -303,7 +303,7 @@ void Control::processTheDatagram(const QByteArray& datagram, const QHostAddress&
     //qDebug() << "sender's DNS" << host.hostName();
 
     //check if it's a new comer
-    addNewNeighbor(host.hostName(), IP, port);
+    addNewNeighbor(IP, port);
 
     QDataStream in(datagram);
     QVariantMap message;
@@ -314,10 +314,10 @@ void Control::processTheDatagram(const QByteArray& datagram, const QHostAddress&
     }
     else if (message.contains(CHAT_TEXT) && message.contains(ORIGIN)
              && message.contains(SEQ_NO)) { // brocast message to a random neighbor
-       processRumorMessage(host.hostName(),message, IP, port, CHAT_MESSAGE);
+       processRumorMessage(message, IP, port, CHAT_MESSAGE);
     }
     else if (message.contains(ORIGIN) && message.contains(SEQ_NO)) {
-        processRumorMessage(host.hostName(),message, IP, port, ROUT_MESSAGE);
+        processRumorMessage(message, IP, port, ROUT_MESSAGE);
     }
     else if (message.contains(DEST) && message.contains(ORIGIN)
              && message.contains(CHAT_TEXT) && message.contains(HOP_LIMIT)) {
@@ -363,7 +363,7 @@ void Control::flipCoins(){
 void Control::doAntiEntropy(){
     Peer* peer = model->getPeerRandomly();
     if (peer) {
-        qDebug() << "send antientropy to" << peer->getIP();
+        //qDebug() << "send antientropy to" << peer->getIP();
         sendMyStatusList(peer->getIP(), peer->getPort());
     }
 }
