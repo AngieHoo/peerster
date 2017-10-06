@@ -58,7 +58,7 @@ const QHash<QString, QPair<QHostAddress, quint16> >& Model::getRoutingTable() co
 }
 
  const int Model::getHighestSeq(const QString& originID) const {
-     if (originID == identity) return mySeqNo;
+     //if (originID == identity) return mySeqNo;
      return statusList[originID].toInt();
 
  }

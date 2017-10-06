@@ -21,29 +21,29 @@ Control::Control(QObject *parent) : QObject(parent)
 }
 
 void Control::start(){
-     bind();
-     //model->creatLocalNeighbors();
-     timer->start();
-     timerRoute->start();
+    bind();
+    //model->creatLocalNeighbors();
+    timer->start();
+    timerRoute->start();
 
-     QStringList commond = QCoreApplication::arguments();
-     int i = 1;
-     while (i < commond.size()) {
-         if (commond[i] == "noforward") {
-             qDebug() << "set forward: false!";
-             forward = false;
-         }
-         else
-         {
-             QString originNeighbor = commond[i];
-             QString address = originNeighbor.left(originNeighbor.indexOf(':'));
-             quint16 port = originNeighbor.mid(originNeighbor.indexOf(':') + 1).toInt();
-             checkInputNeighbor(address, port);
-         }
-         i++;
-     }
+    QStringList commond = QCoreApplication::arguments();
+    int i = 1;
+    while (i < commond.size()) {
+        if (commond[i] == "noforward") {
+            qDebug() << "set forward: false!";
+            forward = false;
+        }
+        else
+        {
+            QString originNeighbor = commond[i];
+            QString address = originNeighbor.left(originNeighbor.indexOf(':'));
+            quint16 port = originNeighbor.mid(originNeighbor.indexOf(':') + 1).toInt();
+            checkInputNeighbor(address, port);
+        }
+        i++;
+    }
 
-     generateRouteMessage();
+    generateRouteMessage();
 }
 
 void Control::bind(){
@@ -190,19 +190,19 @@ void Control::processStatusMessage(const QVariantMap &message, const QHostAddres
     QVariantMap myStatuslist = model->getStatusList();
     QVariantMap senderStatusList = message[WANT].toMap();
     bool flagNew = false; // flag if i have some newer message to send to the IP.
-    if (forward) {
-        for (QVariantMap::const_iterator it = myStatuslist.begin(); it != myStatuslist.end(); it++) {
-            int seq = (senderStatusList.contains(it.key()) == false) ? 1 : senderStatusList[it.key()].toInt();
-            if (seq <= it.value().toInt()) {
-                //qDebug() << "i have some newer message to send to the IP.";
-                flagNew = true;
-                sendOriginMessage(IP, port, model->getMessagelist()[it.key()][seq], it.key(), seq);
-                qDebug() << "my status" << myStatuslist;
-                //qDebug() << "I send him my new message. sender seq: " << seq << "my status:" << it.value().toInt();
-            }
+
+    for (QVariantMap::const_iterator it = myStatuslist.begin(); it != myStatuslist.end(); it++) {
+        int seq = (senderStatusList.contains(it.key()) == false) ? 1 : senderStatusList[it.key()].toInt();
+        if (seq <= it.value().toInt()) {
+            //qDebug() << "i have some newer message to send to the IP.";
+            flagNew = true;
+            QString content = model->getMessagelist()[it.key()][seq];
+            sendOriginMessage(IP, port, content, it.key(), seq);
+            qDebug() << "my status" << myStatuslist;
+            //qDebug() << "I send him my new message. sender seq: " << seq << "my status:" << it.value().toInt();
         }
     }
-    if (flagNew) return; 
+    if (flagNew) return;
     else{
         for (QVariantMap::iterator it = senderStatusList.begin(); it != senderStatusList.end(); it++) {
             if (myStatuslist[it.key()].toInt() + 1 < it.value().toInt()) { // the IP's status is newer than mine.
@@ -212,7 +212,7 @@ void Control::processStatusMessage(const QVariantMap &message, const QHostAddres
             }
         }
         //qDebug() << "same status;";
-       flipCoins(); //we have exactly the same status, I pick up a random neighbor to send my status to it.
+        flipCoins(); //we have exactly the same status, I pick up a random neighbor to send my status to it.
     }
 }
 
@@ -311,11 +311,11 @@ void Control::processTheDatagram(const QByteArray& datagram, const QHostAddress&
     in >> message;
 
     if (message.contains(WANT)) {// a status message
-       processStatusMessage(message, IP, port);
+        processStatusMessage(message, IP, port);
     }
     else if (message.contains(CHAT_TEXT) && message.contains(ORIGIN)
              && message.contains(SEQ_NO)) { // brocast message to a random neighbor
-       processRumorMessage(message, IP, port, CHAT_MESSAGE);
+        processRumorMessage(message, IP, port, CHAT_MESSAGE);
     }
     else if (message.contains(ORIGIN) && message.contains(SEQ_NO)) {
         processRumorMessage(message, IP, port, ROUT_MESSAGE);
@@ -351,7 +351,7 @@ void Control::sendMyStatusList(const QHostAddress& sender, const quint16 senderP
 
 void Control::flipCoins(){
     QTime t= QTime::currentTime();
-    qsrand(t.msec()+t.second()*1000);  
+    qsrand(t.msec()+t.second()*1000);
     int flag = qrand() % FLIP_COIN; // 1/5 rate
     if (flag || !forward) return;
     qDebug() << "flip coins!!!";
