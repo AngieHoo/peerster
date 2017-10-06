@@ -29,7 +29,7 @@ void Control::start(){
     QStringList commond = QCoreApplication::arguments();
     int i = 1;
     while (i < commond.size()) {
-        if (commond[i] == "noforward") {
+        if (commond[i] == "-noforward") {
             qDebug() << "set forward: false!";
             forward = false;
         }
@@ -197,7 +197,7 @@ void Control::processStatusMessage(const QVariantMap &message, const QHostAddres
             //qDebug() << "i have some newer message to send to the IP.";
             flagNew = true;
             QString content = model->getMessagelist()[it.key()][seq];
-            if (forward)
+            if (forward || !forward && content.size() == 0)
                 sendOriginMessage(IP, port, content, it.key(), seq);
             qDebug() << "my status" << myStatuslist;
             //qDebug() << "I send him my new message. sender seq: " << seq << "my status:" << it.value().toInt();
