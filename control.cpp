@@ -188,12 +188,13 @@ void Control::processStatusMessage(const QVariantMap &message, const QHostAddres
     peer->stopTimer();
 
     QVariantMap myStatuslist = model->getStatusList();
-    QVariantMap senerStatusList = message[WANT].toMap();
-    bool flagNew = false; // flag if i have some newer status to send to the IP.
+    QVariantMap senderStatusList = message[WANT].toMap();
+    bool flagNew = false; // flag if i have some newer message to send to the IP.
     if (forward) {
         for (QVariantMap::const_iterator it = myStatuslist.begin(); it != myStatuslist.end(); it++) {
-            int seq = senerStatusList[it.key()].toInt() == 0 ? 1 : senerStatusList[it.key()].toInt();
+            int seq = (senderStatusList.contains(it.key()) == false) ? 1 : senderStatusList[it.key()].toInt();
             if (seq <= it.value().toInt()) {
+                //qDebug() << "i have some newer message to send to the IP.";
                 flagNew = true;
                 sendOriginMessage(IP, port, model->getMessagelist()[it.key()][seq], it.key(), seq);
                 qDebug() << "my status" << myStatuslist;
@@ -201,16 +202,17 @@ void Control::processStatusMessage(const QVariantMap &message, const QHostAddres
             }
         }
     }
-
-    if (flagNew) return;
+    if (flagNew) return; 
     else{ // if I have nothing new for the IP, then check if the IP contains new message that i have not received
-        for (QVariantMap::iterator it = senerStatusList.begin(); it != senerStatusList.end(); it++) {
+        //qDebug() << "no new message";
+        for (QVariantMap::iterator it = senderStatusList.begin(); it != senderStatusList.end(); it++) {
             if (myStatuslist[it.key()].toInt() + 1 < it.value().toInt()) { // the IP's status is newer than mine.
                 qDebug() << "send my status for newer message.";
                 sendMyStatusList(IP, port);
                 return;
             }
         }
+        //qDebug() << "same status;";
         flipCoins(); //we have exactly the same status, I pick up a random neighbor to send my status to it.
     }
 }
@@ -219,7 +221,7 @@ void Control::processRumorMessage(QVariantMap &message, const QHostAddress& IP, 
 {
     QString originID = message[ORIGIN].toString();
     quint32 SeqNo = message[SEQ_NO].toInt();
-    QString content = message[CHAT_TEXT].toString();
+    QString content = (message.contains(CHAT_TEXT) ? message[CHAT_TEXT].toString() : "");
 
     bool direct = true;
     if (message.contains(LAST_IP) && message.contains(LAST_PORT)) {
@@ -230,7 +232,7 @@ void Control::processRumorMessage(QVariantMap &message, const QHostAddress& IP, 
     message[LAST_IP] = IP.toIPv4Address();
     message[LAST_PORT] = port;
 
-    qDebug() << "Reveive a [Romor messasge] from" << IP << ", OriginID:" << originID << ", SeqNo:" << SeqNo << "content" << content;
+    qDebug() << "Reveive a " << ((type == CHAT_MESSAGE) ? "chat" : "route") <<  "messasge from" << IP << ":" << message;// ", OriginID:" << originID << ", SeqNo:" << SeqNo << "content" << content;
     //QVariantMap myStatuslist = model->getStatusList();
     if (model->getHighestSeq(originID) < SeqNo) {
         if (model->isValidNewRoutingID(originID)) {// if the originID is a new one, update the routing table.
@@ -250,7 +252,7 @@ void Control::processRumorMessage(QVariantMap &message, const QHostAddress& IP, 
         else if (type == CHAT_MESSAGE && forward)
             forwardMessageRandomly(message); // send message to a random neighbor.
     }
-    else if (model->getHighestSeq(originID) == SeqNo && type == ROUT_MESSAGE && direct) { // replace the indirect with the direct path
+    else if (model->getHighestSeq(originID) == SeqNo && direct) { // replace the indirect with the direct path
         model->updateRoutingTable(originID, IP, port);
     }
     qDebug() << "reply my status" << model->getStatusList();
@@ -337,12 +339,12 @@ void Control::sendMsg2Peer(Peer* peer, const QVariantMap& message) {
 }
 
 void Control::sendMyStatusList(const QHostAddress& sender, const quint16 senderPort) {
-    QVariantMap myStatusList = model->getStatusList();
-    for (QVariantMap::iterator it = myStatusList.begin(); it != myStatusList.end(); it++) {
-        myStatusList[it.key()] = it.value().toInt() + 1;
+    QVariantMap statusList, my = model->getStatusList();
+    for (QVariantMap::iterator it = my.begin(); it != my.end(); it++) {
+        statusList[it.key()] = it.value().toInt() + 1;
     }
     QVariantMap want;
-    want[WANT] = myStatusList;
+    want[WANT] = statusList;
     //qDebug() << "send my statuslist:" << want;
     sock->sendMessage(sender, senderPort, want);
     return;
@@ -370,6 +372,7 @@ void Control::doAntiEntropy(){
 
 
 void Control::processNoReply(const Peer* peer){
+    qDebug() << "process no reply!";
     QVariantMap message = peer->getMessage();
     Peer* p = model->getPeerRandomly();
     if (peer)
