@@ -70,7 +70,7 @@ void Control::checkInputNeighbor(const QString& address,const quint16& port){
             qDebug()  << address << ", Port: " << port;
             if (model->isValidNewComer(testIP, port)) {
                 Peer* peer = model->addNeighbor(testIP, port);
-                connect(peer, SIGNAL(timerOut(const Peer*)),this, SLOT(processNoReply(const Peer*)));
+                connect(peer, SIGNAL(timerOut(Peer*)),this, SLOT(processNoReply(Peer*)));
             }
         }
     }
@@ -83,7 +83,7 @@ void Control::checkInputNeighbor(const QString& address,const quint16& port){
             qDebug()  << hostInfo.addresses().at(0)  << ", Port: " << port;
             if (model->isValidNewComer(hostInfo.addresses().at(0), port)) {
                 Peer* peer = model->addNeighbor(hostInfo.addresses().at(0), port);
-                connect(peer, SIGNAL(timerOut(const Peer*)),this, SLOT(processNoReply(const Peer*)));
+                connect(peer, SIGNAL(timerOut(Peer*)),this, SLOT(processNoReply(Peer*)));
             }
         }
         else{
@@ -203,8 +203,7 @@ void Control::processStatusMessage(const QVariantMap &message, const QHostAddres
         }
     }
     if (flagNew) return; 
-    else{ // if I have nothing new for the IP, then check if the IP contains new message that i have not received
-        //qDebug() << "no new message";
+    else{
         for (QVariantMap::iterator it = senderStatusList.begin(); it != senderStatusList.end(); it++) {
             if (myStatuslist[it.key()].toInt() + 1 < it.value().toInt()) { // the IP's status is newer than mine.
                 qDebug() << "send my status for newer message.";
@@ -213,7 +212,7 @@ void Control::processStatusMessage(const QVariantMap &message, const QHostAddres
             }
         }
         //qDebug() << "same status;";
-        if (forward) flipCoins(); //we have exactly the same status, I pick up a random neighbor to send my status to it.
+        flipCoins(); //we have exactly the same status, I pick up a random neighbor to send my status to it.
     }
 }
 
@@ -290,7 +289,7 @@ void Control::addNewNeighbor(const QHostAddress &IP, const quint16 &port)
 {
     if (model->isValidNewComer(IP, port)) {
         Peer* peer = model->addNeighbor(IP, port);
-        connect(peer, SIGNAL(timerOut(const Peer*)),this, SLOT(processNoReply(const Peer*)));
+        connect(peer, SIGNAL(timerOut(Peer*)),this, SLOT(processNoReply(Peer*)));
     }
 }
 
@@ -371,10 +370,12 @@ void Control::doAntiEntropy(){
 }
 
 
-void Control::processNoReply(const Peer* peer){
+void Control::processNoReply(Peer* peer){
     qDebug() << "process no reply!";
+    peer->stopTimer();
     QVariantMap message = peer->getMessage();
     Peer* p = model->getPeerRandomly();
+
     if (peer)
         sendMsg2Peer(p, message);
 }
