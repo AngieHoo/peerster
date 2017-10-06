@@ -12,6 +12,8 @@ const QString WANT = "Want";
 const QString LAST_IP = "LastIP";
 const QString LAST_PORT = "LastPort";
 
+const int FLIP_COIN = 5;
+
 enum messageType {
     CHAT_MESSAGE,
     ROUT_MESSAGE,
