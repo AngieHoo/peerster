@@ -213,7 +213,7 @@ void Control::processStatusMessage(const QVariantMap &message, const QHostAddres
             }
         }
         //qDebug() << "same status;";
-        flipCoins(); //we have exactly the same status, I pick up a random neighbor to send my status to it.
+        if (forward) flipCoins(); //we have exactly the same status, I pick up a random neighbor to send my status to it.
     }
 }
 
@@ -228,11 +228,11 @@ void Control::processRumorMessage(QVariantMap &message, const QHostAddress& IP, 
         addNewNeighbor(QHostAddress(message[LAST_IP].toInt()), message[LAST_PORT].toInt());
         direct = false;
     }
+    qDebug() << "Reveive a " << "[direct:" << direct << "]" << ((type == CHAT_MESSAGE) ? "[chat]" : "[route]") <<  "messasge from" << IP << ":" << message;// ", OriginID:" << originID << ", SeqNo:" << SeqNo << "content" << content;
 
     message[LAST_IP] = IP.toIPv4Address();
     message[LAST_PORT] = port;
 
-    qDebug() << "Reveive a " << ((type == CHAT_MESSAGE) ? "chat" : "route") <<  "messasge from" << IP << ":" << message;// ", OriginID:" << originID << ", SeqNo:" << SeqNo << "content" << content;
     //QVariantMap myStatuslist = model->getStatusList();
     if (model->getHighestSeq(originID) < SeqNo) {
         if (model->isValidNewRoutingID(originID)) {// if the originID is a new one, update the routing table.
@@ -354,7 +354,7 @@ void Control::flipCoins(){
     QTime t= QTime::currentTime();
     qsrand(t.msec()+t.second()*1000);
     int flag = qrand() % 2;
-    if (flag) return;
+    if (!flag) return;
     qDebug() << "flip coins!!!";
     Peer* peer = model->getPeerRandomly();
     if (peer)

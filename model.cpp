@@ -90,7 +90,7 @@ void Model::setPrivateChattingPeer(const QString & pcp)
 
 void Model::updateRoutingTable(const QString &originID, const QHostAddress &senderIP, quint16 senderPort)
 {
-    if (originID == identity || routingTable[originID].first == senderIP && routingTable[originID].second == senderPort) return;
+    if (originID == identity || routingTable.contains(originID) && routingTable[originID].first == senderIP && routingTable[originID].second == senderPort) return;
     routingTable[originID].first = senderIP;
     routingTable[originID].second = senderPort;
     qDebug() << "Update routingTable:" << routingTable;
