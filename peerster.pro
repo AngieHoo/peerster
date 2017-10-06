@@ -3,10 +3,15 @@
 ######################################################################
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
+greaterThan(QT_MAJOR_VERSION, 4): QT += widget
 TEMPLATE = app
 TARGET = peerster
 INCLUDEPATH += .
 DEPENDPATH += .
+<<<<<<< HEAD
+=======
+QMAKE_CXXFLAGS += -std=c++0x
+>>>>>>> 22a69bc06f5d3d1797adac9982106bef18b3fae7
 QT += network core gui
 
 QMAKE_CXXFLAGS += -std=c++0x
