@@ -25,7 +25,7 @@ public:
     void SetPort(const quint16&);
 
 signals:
-    void timerOut(const Peer* self);
+    void timerOut(Peer* self);
 
 
 private slots:

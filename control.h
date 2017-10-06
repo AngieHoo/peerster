@@ -26,7 +26,7 @@ public:
 
 public slots:
     void processTheDatagram(const QByteArray&, const QHostAddress&, const quint16&);
-    void processNoReply(const Peer*);
+    void processNoReply(Peer*);
 
 
 private slots:

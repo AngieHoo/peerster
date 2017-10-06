@@ -2,10 +2,10 @@
 
 Peer::Peer(const QHostAddress& IP, const quint16& Port, QObject *parent, const QString& DNS)
     : QObject(parent), DNS(DNS), IP(IP), Port(Port){
-    //timer.setSingleShot(true);
-    //timer.setInterval(2000);
+    timer.setSingleShot(true);
+    timer.setInterval(2000);
 
-    //connect(&timer, SIGNAL(timeout()), this, SLOT(sendTimeOutMsg()));
+    connect(&timer, SIGNAL(timeout()), this, SLOT(sendTimeOutMsg()));
 }
 
 Peer::Peer(){
@@ -44,8 +44,8 @@ void Peer::sendTimeOutMsg(){
     emit timerOut(this);
 }
 void Peer::startTimer(){
-    QTimer::singleShot(2000, this, SLOT(sendTimeOutMsg()));
-    //timer.start();
+    //QTimer::singleShot(2000, this, SLOT(sendTimeOutMsg()));
+    timer.start();
 }
 
 void Peer::stopTimer(){
