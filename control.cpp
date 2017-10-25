@@ -137,7 +137,7 @@ void Control::generateRouteMessage()
     routeMessage[ORIGIN] = model->getIdentity();
     routeMessage[SEQ_NO] = model->getMySeqNo();
     qDebug() << "send routing message: " << routeMessage;
-    forwardMessageRandomly(routeMessage);
+    forwardMessage2All(routeMessage);
 }
 
 //brocast rumor messsage include chat message and route message.
@@ -239,7 +239,6 @@ void Control::processRumorMessage(QVariantMap &message, const QHostAddress& IP, 
         }
        model->updateRoutingTable(originID, IP, port);
     }
-    //QVariantMap myStatuslist = model->getStatusList();
     if (model->getHighestSeq(originID) < SeqNo) {
         if (!direct) {
             if (model->isValidNewRoutingID(originID)) {// if the originID is a new one, update the routing table.
