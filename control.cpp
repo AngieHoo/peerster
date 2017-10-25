@@ -234,15 +234,19 @@ void Control::processRumorMessage(QVariantMap &message, const QHostAddress& IP, 
     message[LAST_PORT] = port;
 
     if (direct) { // replace the indirect with the direct path
-       model->updateRoutingTable(originID, IP, port);
-    }
-
-    //QVariantMap myStatuslist = model->getStatusList();
-    if (model->getHighestSeq(originID) < SeqNo) {
         if (model->isValidNewRoutingID(originID)) {// if the originID is a new one, update the routing table.
             emit addNewRouitngnID(originID);
         }
-        model->updateRoutingTable(originID, IP, port);
+       model->updateRoutingTable(originID, IP, port);
+    }
+    //QVariantMap myStatuslist = model->getStatusList();
+    if (model->getHighestSeq(originID) < SeqNo) {
+        if (!direct) {
+            if (model->isValidNewRoutingID(originID)) {// if the originID is a new one, update the routing table.
+                emit addNewRouitngnID(originID);
+            }
+            model->updateRoutingTable(originID, IP, port);
+        }
         if (model->getHighestSeq(originID) + 1 == SeqNo) {
             qDebug() << "right seq";
             model->addNewMessage(originID, IP, port, content); // update message list and status list
