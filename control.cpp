@@ -233,6 +233,10 @@ void Control::processRumorMessage(QVariantMap &message, const QHostAddress& IP, 
     message[LAST_IP] = IP.toIPv4Address();
     message[LAST_PORT] = port;
 
+    if (direct) { // replace the indirect with the direct path
+       model->updateRoutingTable(originID, IP, port);
+    }
+
     //QVariantMap myStatuslist = model->getStatusList();
     if (model->getHighestSeq(originID) < SeqNo) {
         if (model->isValidNewRoutingID(originID)) {// if the originID is a new one, update the routing table.
@@ -252,9 +256,10 @@ void Control::processRumorMessage(QVariantMap &message, const QHostAddress& IP, 
         else if (type == CHAT_MESSAGE && forward)
             forwardMessageRandomly(message); // send message to a random neighbor.
     }
-    else if (model->getHighestSeq(originID) == SeqNo && direct) { // replace the indirect with the direct path
-        model->updateRoutingTable(originID, IP, port);
-    }
+//  else if (model->getHighestSeq(originID) == SeqNo && direct) { // replace the indirect with the direct path
+//       model->updateRoutingTable(originID, IP, port);
+//    }
+
     qDebug() << "reply my status" << model->getStatusList();
     sendMyStatusList(IP, port);// reply my statuslist;
 }
