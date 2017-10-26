@@ -33,7 +33,8 @@ void FileManager::addFiles(const QStringList & fileList)
             fileBlocks[hashResult] = block;
         }
         shaHash.update(metafile);
-        fileInfoList.push_back(FileInfo(name, metafile, shaHash.final().toByteArray(), fileSize));
+        FileInfo fi(name, metafile, shaHash.final().toByteArray(), fileSize);
+        fileInfoList.push_back(fi);
     }
 
 }
