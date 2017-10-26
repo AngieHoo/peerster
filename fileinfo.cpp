@@ -4,6 +4,10 @@
      : metafile(metafile), fileName(fileName), metaHashVal(metaHashVal), size(size)
  {}
 
+ FileInfo::FileInfo()
+ {
+ }
+
 // FileInfo::FileInfo(const FileInfo & f)
 // {
 //     fileName = f.fileName;

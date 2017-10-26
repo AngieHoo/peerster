@@ -7,6 +7,7 @@ class FileInfo
 {
 public:
     FileInfo(const QString&, const QByteArray&, const QByteArray&, quint64);
+    FileInfo();
 //    FileInfo(const FileInfo& );
 //    FileInfo(FileInfo&& );
     QString getFileName() const;
