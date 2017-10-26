@@ -3,6 +3,7 @@
 int main(int argc, char **argv)
 {
     // Initialize Qt toolkit
+    QCA::Initializer qcainit;
     QApplication app(argc,argv);
 
     // Create an initial chat dialog window

@@ -7,7 +7,7 @@
 #include <QObject>
 #include <QVector>
 #include <QFile>
-//#include <QtCrypto>
+#include <QtCrypto>
 
 using namespace peerster;
 
