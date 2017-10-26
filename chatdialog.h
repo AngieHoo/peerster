@@ -8,6 +8,8 @@
 #include <QLabel>
 #include <QListWidget>
 #include <QInputDialog>
+#include <QPushButton>
+#include <QFileDialog>
 
 
 #include <qmath.h>
@@ -32,6 +34,7 @@ private slots:
      void sendMyMessage();
      void addNewNeighbor();
      void choosePeer(QListWidgetItem* peer);
+     void chooseFiles();
 
 
 signals:
@@ -47,6 +50,7 @@ private:
     QLabel* inputTextPrompt;
     QListWidget* privateChatList;
     QInputDialog* privateDialog;
+    QFileDialog* fileDialog;
 
 
 

@@ -8,12 +8,15 @@ Control::Control(QObject *parent) : QObject(parent)
 
     model = new Model(this);
 
+    fileManager = new FileManager(this);
+
     connect(model, SIGNAL(displayNewNeighbor(const QHostAddress&,const quint16&)), this, SIGNAL(displayNewNeighbor(const QHostAddress&,const quint16&)));
 
     timer = new QTimer(this);
     timer->setInterval(10000);
     timerRoute = new QTimer(this);
     timerRoute->setInterval(60000);
+
 
     connect(timer, SIGNAL(timeout()), this, SLOT(doAntiEntropy()));
     connect(timerRoute, SIGNAL(timeout()), this, SLOT(generateRouteMessage()));
@@ -22,7 +25,6 @@ Control::Control(QObject *parent) : QObject(parent)
 
 void Control::start(){
     bind();
-    //model->creatLocalNeighbors();
     timer->start();
     timerRoute->start();
 
@@ -142,10 +144,8 @@ void Control::generateRouteMessage()
 
 //brocast rumor messsage include chat message and route message.
 void Control::forwardMessageRandomly(const QVariantMap& message) {
-    //qDebug() << "brocast message";
     Peer* randomPeer = model->getPeerRandomly();
     if (!randomPeer) return;
-    //qDebug() << "pick peer:" << randomPeer->getIP() << randomPeer->getPort();
     qDebug() << "brocast rumor message to" << randomPeer->getIP() << ":" << randomPeer->getPort();
     sendMsg2Peer(randomPeer, message);
 }
@@ -163,6 +163,11 @@ void Control::sendMyPrivateMessage(const QString &content)
 {
     qDebug() << "sendMyPrivateMessage.";
     sendPrivateMessage(model->getPrivateChattingPeer(), model->getIdentity(), content, 10);
+}
+
+void Control::uploadFiles(const QStringList &fileNameList)
+{
+    fileManager->addFiles(fileNameList);
 }
 
 void Control::sendPrivateMessage(const QString &destinationID, const QString &originID, const QString &content, int hop)
@@ -194,13 +199,11 @@ void Control::processStatusMessage(const QVariantMap &message, const QHostAddres
     for (QVariantMap::const_iterator it = myStatuslist.begin(); it != myStatuslist.end(); it++) {
         int seq = (senderStatusList.contains(it.key()) == false) ? 1 : senderStatusList[it.key()].toInt();
         if (seq <= it.value().toInt()) {
-            //qDebug() << "i have some newer message to send to the IP.";
             flagNew = true;
             QString content = model->getMessagelist()[it.key()][seq];
             if (forward || !forward && content.size() == 0)
                 sendOriginMessage(IP, port, content, it.key(), seq);
             qDebug() << "my status" << myStatuslist;
-            //qDebug() << "I send him my new message. sender seq: " << seq << "my status:" << it.value().toInt();
         }
     }
     if (flagNew) return;
@@ -212,7 +215,6 @@ void Control::processStatusMessage(const QVariantMap &message, const QHostAddres
                 return;
             }
         }
-        //qDebug() << "same status;";
         flipCoins(); //we have exactly the same status, I pick up a random neighbor to send my status to it.
     }
 }
@@ -233,7 +235,7 @@ void Control::processRumorMessage(QVariantMap &message, const QHostAddress& IP, 
     message[LAST_IP] = IP.toIPv4Address();
     message[LAST_PORT] = port;
 
-    if (direct) { // replace the indirect with the direct path
+    if (direct) { // replace the indirect with the dßirect path
         if (model->isValidNewRoutingID(originID)) {// if the originID is a new one, update the routing table.
             emit addNewRouitngnID(originID);
         }
@@ -259,9 +261,6 @@ void Control::processRumorMessage(QVariantMap &message, const QHostAddress& IP, 
         else if (type == CHAT_MESSAGE && forward)
             forwardMessageRandomly(message); // send message to a random neighbor.
     }
-//  else if (model->getHighestSeq(originID) == SeqNo && direct) { // replace the indirect with the direct path
-//       model->updateRoutingTable(originID, IP, port);
-//    }
 
     qDebug() << "reply my status" << model->getStatusList();
     sendMyStatusList(IP, port);// reply my statuslist;
@@ -310,7 +309,6 @@ void Control::processTheDatagram(const QByteArray& datagram, const QHostAddress&
         qDebug() << "Lookup failed:" << host.errorString();
         return;
     }
-    //qDebug() << "sender's DNS" << host.hostName();
 
     //check if it's a new comer
     addNewNeighbor(IP, port);

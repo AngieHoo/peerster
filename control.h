@@ -22,6 +22,7 @@ public:
     void start();
     void addPrivateChatPeer(const QString&);
     void sendMyPrivateMessage(const QString& content);
+    void uploadFiles(const QStringList &fileNameList);
     QString getIdentity();
 
 public slots:
@@ -46,6 +47,7 @@ private:
      QTimer* timer;
      QTimer* timerRoute;
      QHostInfo hostInfo;
+     FileManager* fileManager;
      bool forward;
 
 

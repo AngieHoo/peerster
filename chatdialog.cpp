@@ -13,6 +13,9 @@ ChatDialog::ChatDialog()
     textinput = new TextInput(this);
     textinput->setFocus();
 
+    QPushButton *addFileButtn = new QPushButton("send Files", this);
+
+
     onlineNeighbor = new QTextEdit(this);
     onlineNeighbor->setReadOnly(true);
 
@@ -27,6 +30,7 @@ ChatDialog::ChatDialog()
     layoutText->addWidget(textview);
     layoutText->addWidget(inputTextPrompt);
     layoutText->addWidget(textinput);
+    layoutText->addWidget(addFileButtn);
 
 
     QVBoxLayout *layoutNeighbor = new QVBoxLayout(this);
@@ -54,6 +58,17 @@ ChatDialog::ChatDialog()
     privateDialog->hide();
 
     connect(privateDialog, SIGNAL(accepted()), this, SLOT(sendPrivateMessage()));
+
+    fileDialog = new QFileDialog(this);
+    fileDialog->setWindowTitle("Open files");
+    fileDialog->setDirectory(".");
+    fileDialog->setFileMode(QFileDialog::ExistingFiles);
+    fileDialog->hide();
+
+    connect(addFileButtn, SIGNAL(clicked(bool)), this, SLOT(chooseFiles()));
+    //QStringList strPathList = fileDialog.selectedFiles();
+
+
 
 
     control = new Control(this);
@@ -94,6 +109,18 @@ void ChatDialog::choosePeer(QListWidgetItem *peer)
     control->addPrivateChatPeer(peer->text());
     privateDialog->show();
 
+}
+
+void ChatDialog::chooseFiles()
+{
+    fileDialog->show();
+    QStringList strPathList;
+    if (fileDialog->exec() == QDialog::Accepted)
+    {
+         strPathList = fileDialog->selectedFiles();
+         control->uploadFiles(strPathList);
+    }
+    qDebug() << strPathList;
 }
 
 

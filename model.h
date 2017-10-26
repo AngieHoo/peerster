@@ -10,6 +10,7 @@
 
 #include "peer.h"
 #include "lib.h"
+#include "filemanager.h"
 
 using namespace peerster;
 
