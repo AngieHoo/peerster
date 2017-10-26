@@ -4,6 +4,23 @@
      : metafile(metafile), fileName(fileName), metaHashVal(metaHashVal), size(size)
  {}
 
+ FileInfo::FileInfo(FileInfo & f)
+ {
+     fileName = f.fileName;
+     metafile = f.metafile;
+     metaHashVal = f.metaHashVal;
+     size = f.size;
+ }
+
+ FileInfo::FileInfo(FileInfo && mf)
+ {
+     fileName = std::move(mf.fileName);
+     metafile = std::move(mf.metafile);
+     metaHashVal = std::move(mf.metaHashVal);
+     size = std::move(mf.size);
+ }
+
+
 QString FileInfo::getFileName() const
 {
     return fileName;

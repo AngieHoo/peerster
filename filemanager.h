@@ -1,14 +1,14 @@
 #ifndef FILEMANAGER_H
 #define FILEMANAGER_H
 
-#include "lib.h"
-#include "fileinfo.h"
 #include <QMap>
 #include <QObject>
 #include <QVector>
 #include <QFile>
 #include <QDebug>
 #include <QtCrypto>
+#include "lib.h"
+#include "fileinfo.h"
 
 using namespace peerster;
 
