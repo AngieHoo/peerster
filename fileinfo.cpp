@@ -1,6 +1,6 @@
 #include "fileinfo.h"
 
- FileInfo::FileInfo(const QString& fileName, const QByteArray& metafile, const QByteArray& metaHashVal, quint32 size)
+ FileInfo::FileInfo(const QString& fileName, const QByteArray& metafile, const QByteArray& metaHashVal, quint64 size)
      : metafile(metafile), fileName(fileName), metaHashVal(metaHashVal), size(size)
  {}
 

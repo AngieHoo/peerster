@@ -28,12 +28,12 @@ void FileManager::addFiles(const QStringList & fileList)
             QByteArray block = file.read(loadSize);
             leftSize -= loadSize;
             shaHash.update(block);
-            QByteArray hashResult = shaHash.final();
+            QByteArray hashResult = shaHash.final().toByteArray();
             metafile.append(hashResult);
             fileBlocks[hashResult] = block;
         }
         shaHash.update(metafile);
-        fileInfoList.push_back(FileInfo(name, metafile, shaHash.final(), fileSize));
+        fileInfoList.push_back(FileInfo(name, metafile, shaHash.final().toByteArray(), fileSize));
     }
 
 }

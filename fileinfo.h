@@ -6,7 +6,7 @@
 class FileInfo
 {
 public:
-    FileInfo(const QString&, const QByteArray&, const QByteArray&, quint32);
+    FileInfo(const QString&, const QByteArray&, const QByteArray&, quint64);
     QString getFileName() const;
     QByteArray getMetafile() const;
     QByteArray getMetaHashVal() const;
