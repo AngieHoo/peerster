@@ -23,6 +23,7 @@ void FileManager::addFiles(const QStringList & fileList)
         quint64 fileSize = file.size(), leftSize = fileSize;
         QByteArray metafile;
         QCA::Hash shaHash("sha1");
+        qDebug() << "fileName:" << name << ", size: " << fileSize << "metaFile:";
         while (leftSize) {
             quint64 loadSize = leftSize > BLOCK_BYTE_SIZE ? BLOCK_BYTE_SIZE : leftSize;
             QByteArray block = file.read(loadSize);
@@ -31,10 +32,11 @@ void FileManager::addFiles(const QStringList & fileList)
             QByteArray hashResult = shaHash.final().toByteArray();
             metafile.append(hashResult);
             fileBlocks[hashResult] = block;
+            qDebug() << hashResult;
         }
         shaHash.update(metafile);
-        FileInfo fi(name, metafile, shaHash.final().toByteArray(), fileSize);
-        fileInfoList.push_back(fi);
+        qDebug() << "metaFile Hash Value:" << shaHash.final().toByteArray();
+        fileInfoList.push_back(FileInfo(name, metafile, shaHash.final().toByteArray(), fileSize));
     }
 
 }
