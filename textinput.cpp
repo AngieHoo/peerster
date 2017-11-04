@@ -1,6 +1,5 @@
 #include "textinput.h"
 
-
 TextInput::TextInput(QWidget *parent): QTextEdit(parent){}
 
 void TextInput::keyPressEvent(QKeyEvent* event) {

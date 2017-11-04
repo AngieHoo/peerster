@@ -7,6 +7,7 @@
 #include <QVector>
 #include <unistd.h>
 #include <QTime>
+#include <QPair>
 
 #include "peer.h"
 #include "lib.h"
@@ -23,22 +24,26 @@ public:
     quint16 getMyPort() const;
     quint16 getMyPortMax() const;
     quint32 getMySeqNo() const;
+    bool hasDirectSender(const QString&) const;
     Peer* getPeerRandomly() const;
+    QVector<Peer*> getKNeighborsRandomly(int) const;
     const QString& getIdentity() const;
     const QVariantMap& getStatusList() const;
     const QHash<QString, QPair<QHostAddress,quint16>>&  getRoutingTable() const;
     const QMap<QString,QMap<quint32, QString>>& getMessagelist() const;
-    const QVector<Peer*> getNeighbors() const;
-    const int getHighestSeq(const QString& originID) const;
+    const QVector<Peer*>& getNeighbors() const;
+    int getHighestSeq(const QString& originID) const;
     const QString getPrivateChattingPeer() const;
     void setMyPort(quint16);
     void setMyPortMin(quint16);
     void setMyPortMax(quint16);
     void setPrivateChattingPeer(const QString&);
 
+
     void updateRoutingTable(const QString& originID, const QHostAddress& senderIP, quint16 senderPort);
     Peer* addNeighbor(const QHostAddress&, const quint16&);
     Peer* getNeighbor(const QHostAddress& IP, const quint16& Port);
+    QPair<QHostAddress, quint16> getDirectSender(const QString& ID);
     bool isValidNewRoutingID(const QString& originID);
     bool isValidNewComer(const QHostAddress&, const quint16&);
     void addMyMessage(const QString& content = "");

@@ -26,7 +26,7 @@ const QMap<QString,QMap<quint32, QString>>& Model::getMessagelist() const{
     return messageList;
 }
 
-const QVector<Peer *> Model::getNeighbors() const
+const QVector<Peer *>& Model::getNeighbors() const
 {
     return neighbors;
 }
@@ -44,6 +44,22 @@ Peer* Model::getPeerRandomly() const{
     return neighbors[pickNo];
 }
 
+QVector<Peer *> Model::getKNeighborsRandomly(int k) const
+{
+    if (k >= neighbors.size()) return getNeighbors();
+    QTime t= QTime::currentTime();
+    qsrand(t.msec()+t.second()*1000);
+    QSet<int> chosen;
+    QVector<Peer *> res;
+    while(res.size() < k) {
+        int index = qrand() % neighbors.size();
+        if (chosen.contains(index)) continue;
+        chosen.insert(index);
+        res.push_back(neighbors[index]);
+    }
+    return res;
+}
+
 const QString& Model::getIdentity() const{
     return identity;
 }
@@ -52,12 +68,17 @@ quint32 Model::getMySeqNo() const{
     return mySeqNo;
 }
 
+bool Model::hasDirectSender(const QString &ID) const
+{
+    return routingTable.contains(ID);
+}
+
 const QHash<QString, QPair<QHostAddress, quint16> >& Model::getRoutingTable() const
 {
     return routingTable;
 }
 
- const int Model::getHighestSeq(const QString& originID) const {
+int Model::getHighestSeq(const QString& originID) const {
      //if (originID == identity) return mySeqNo;
      return statusList[originID].toInt();
 
@@ -97,7 +118,7 @@ void Model::updateRoutingTable(const QString &originID, const QHostAddress &send
 }
 
 bool Model::isValidNewRoutingID(const QString& originID) {
-    qDebug() << "routing table:" << routingTable;
+    //qDebug() << "routing table:" << routingTable;
     if (routingTable.contains(originID) || originID == identity) return false;
     return true;
 }
@@ -131,6 +152,13 @@ Peer* Model::getNeighbor(const QHostAddress& IP, const quint16& Port){
     }
     return NULL;
 }
+
+QPair<QHostAddress, quint16> Model::getDirectSender(const QString& ID)
+{
+    return QPair<QHostAddress, quint16>(routingTable[ID].first, routingTable[ID].second);
+}
+
+
 
 void Model::addMyMessage(const QString& content){
     mySeqNo++;

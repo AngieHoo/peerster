@@ -8,9 +8,11 @@
 #include <QDebug>
 #include <QtCrypto>
 #include "lib.h"
-#include "fileinfo.h"
+//#include "fileinfo.h"
 
 using namespace peerster;
+
+
 
 class FileManager : public QObject
 {
@@ -18,14 +20,14 @@ class FileManager : public QObject
 public:
     FileManager(const QStringList&, QObject *parent = 0);
     FileManager(QObject *parent = 0);
-    void addFiles(const QStringList&);
-    const QByteArray& getBlockAt(const QByteArray&);
+    void upLoadFiles(const QStringList&);
+    QByteArray getBlockAt(const QByteArray&);
+    QVector<QPair<QString, QByteArray>> findMatchedFiles(const QStringList &);
 
 
 private:
-    QMap<QByteArray, QByteArray> fileBlocks;
-    QVector<FileInfo> fileInfoList;
-    //QStringList<string> fileList;
+    QMap<QByteArray ,FileInfo> fileInfoList;
+
 
 };
 

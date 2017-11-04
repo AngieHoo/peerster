@@ -16,6 +16,7 @@
 
 #include "textinput.h"
 #include "control.h"
+using namespace peerster;
 
 class ChatDialog : public QDialog
 {
@@ -29,16 +30,20 @@ public slots:
      void displayNewMessage(const QString&);
      void addChatPeer(const QString&);
      void sendPrivateMessage();
+     void addNewMatchedFiles(const QString&, const QString&);
 
 private slots: 
      void sendMyMessage();
      void addNewNeighbor();
      void choosePeer(QListWidgetItem* peer);
+     void chooseMatchFile(QListWidgetItem* file);
      void chooseFiles();
-
+     //void sendDownLoadRequest();
+     void searchFiles();
 
 signals:
      void finishLookUp();
+
 
 private:
     Control* control;
@@ -46,12 +51,14 @@ private:
     TextInput* textinput;
     QTextEdit* onlineNeighbor;
     QLineEdit* neighborInput;
-    QLabel* inputNeighborPrompt;
-    QLabel* inputTextPrompt;
+
     QListWidget* privateChatList;
     QInputDialog* privateDialog;
-    QFileDialog* fileDialog;
-
+    QLineEdit* downLoadInput;
+    QLineEdit* downLoadNodeID;
+    QLineEdit* searchInput;
+    QListWidget* matchFileList;
+    QTextEdit* upLoadFiles;
 
 
 };

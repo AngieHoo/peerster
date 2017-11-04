@@ -17,10 +17,8 @@ HEADERS += chatdialog.h netsocket.h peer.h textinput.h \
     control.h \
     model.h \
     lib.h \
-    filemanager.h \
-    fileinfo.h
+    filemanager.h
 SOURCES += chatdialog.cpp main.cc netsocket.cpp peer.cpp textinput.cpp \
     control.cpp \
     model.cpp \
-    filemanager.cpp \
-    fileinfo.cpp
+    filemanager.cpp

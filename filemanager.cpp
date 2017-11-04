@@ -1,9 +1,10 @@
 #include "filemanager.h"
+//QString fromQByteArrayToQString_16(const QByteArray& ba);
 
 FileManager::FileManager(const QStringList& fileList, QObject *parent)
     :QObject(parent)
 {
-   addFiles(fileList);
+   upLoadFiles(fileList);
 }
 
 
@@ -12,7 +13,7 @@ FileManager::FileManager(QObject *parent)
 {
 }
 
-void FileManager::addFiles(const QStringList & fileList)
+void FileManager::upLoadFiles(const QStringList & fileList)
 {
     for (auto name : fileList) {
         QFile file(name);
@@ -31,18 +32,66 @@ void FileManager::addFiles(const QStringList & fileList)
             shaHash.update(block);
             QByteArray hashResult = shaHash.final().toByteArray();
             metafile.append(hashResult);
-            fileBlocks[hashResult] = block;
-            qDebug() << hashResult;
+            //fileBlocks[hashResult] = block;
+            qDebug() << "size:" << hashResult.size() << "\""<< hashResult << "\"";
+            shaHash.clear();
         }
         shaHash.update(metafile);
-        qDebug() << "metaFile Hash Value:" << shaHash.final().toByteArray();
-        fileInfoList.push_back(FileInfo(name, metafile, shaHash.final().toByteArray(), fileSize));
+        QByteArray metaHash = shaHash.final().toByteArray();
+        qDebug() << "metaFile Hash Value:" << metaHash << " toHex: " << metaHash.toHex();
+        fileInfoList[metaHash] = (FileInfo(name, metafile, metaHash, fileSize));
     }
 
 }
 
 
-const QByteArray &FileManager::getBlockAt(const QByteArray & key)
+QByteArray FileManager::getBlockAt(const QByteArray& key)
 {
-    return fileBlocks[key];
+   QByteArray res;
+   qDebug() << "fileList:" << fileInfoList.size();
+    for (auto file : fileInfoList) {
+        qDebug() << "name:" << file.fileName << ",metaHashValue" << file.metaHashVal << "size:" << file.size;
+        qDebug() << "block count" << file.size / BLOCK_BYTE_SIZE << ", " << file.metafile.size() / HASH_SIZE;
+        if (file.metaHashVal == key) return file.metafile;
+        int index = 0;
+        QFile localFile(file.fileName);
+        if (!localFile.open(QFile::ReadOnly)) {
+            qDebug() << "Fail to open the file!";
+            continue;
+        }
+        while (index < localFile.size()){
+            qDebug() << index;
+            int len = (file.size - index >= BLOCK_BYTE_SIZE) ? BLOCK_BYTE_SIZE : file.size - index;
+            qDebug() << "readSize:" << len;
+            QByteArray blockHash = file.metafile.mid(index / BLOCK_BYTE_SIZE * HASH_SIZE, HASH_SIZE);
+            res = localFile.read(len);
+            qDebug() << res;
+            if (blockHash == key) {
+                qDebug() << "found the flie block!!!!!!!!";
+                localFile.close();
+                return res;
+            }
+            index += BLOCK_BYTE_SIZE;
+        }
+    }
+    return res;
 }
+
+QVector<QPair<QString, QByteArray>> FileManager::findMatchedFiles(const QStringList &keyWords)
+{
+    QVector<QPair<QString, QByteArray>> res;
+    for (auto file : fileInfoList) {
+        for (auto kw : keyWords) {
+            if (file.fileName.contains(kw)){
+                QString newName = file.fileName.mid(file.fileName.lastIndexOf(QRegExp("[\\/]")) + 1);
+                res.push_back(QPair<QString, QByteArray>(newName, file.metaHashVal));
+                qDebug() << "find matched files : " << newName;
+                break;
+            }
+        }
+    }
+
+    return res;
+}
+
+
